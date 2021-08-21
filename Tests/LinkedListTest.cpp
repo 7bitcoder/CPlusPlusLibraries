@@ -7,24 +7,31 @@
 class LinkedListTest : public ::testing::Test
 {
 protected:
+    static void SetUpTestSuite() {}
+
     LinkedListTest() {}
 
-    void SetUp() override
-    {
-    }
+    void SetUp() override {}
 
     void TearDown() override {}
 
     ~LinkedListTest() {}
 
-    template<class T>
-
-    bool equals(const List<T>& list, const std::vector<T> expect) {
-        return std::equal(list.begin(), list.end(), expect.begin(), expect.end());
-    }
-
     static void TearDownTestSuite() {}
 };
+
+struct TestClass
+{
+    int field;
+    void method() {}
+};
+
+bool operator==(const TestClass &cl1, const TestClass &cl2) { return cl1.field == cl2.field; }
+bool operator!=(const TestClass &cl1, const TestClass &cl2) { return cl1.field != cl2.field; }
+bool operator<(const TestClass &cl1, const TestClass &cl2) { return cl1.field < cl2.field; }
+bool operator>(const TestClass &cl1, const TestClass &cl2) { return cl1.field > cl2.field; }
+bool operator<=(const TestClass &cl1, const TestClass &cl2) { return cl1.field <= cl2.field; }
+bool operator>=(const TestClass &cl1, const TestClass &cl2) { return cl1.field >= cl2.field; }
 
 TEST_F(LinkedListTest, AtTest)
 {
@@ -73,14 +80,6 @@ TEST_F(LinkedListTest, AtOperatorTest)
         },
         std::out_of_range);
 }
-
-struct TestClass
-{
-    int field;
-    void method() {}
-};
-
-bool operator==(const TestClass &cl1, const TestClass &cl2) { return cl1.field == cl2.field; }
 
 TEST_F(LinkedListTest, AtOperatorClassTest)
 {
@@ -165,7 +164,6 @@ TEST_F(LinkedListTest, IteratorClassTest)
     EXPECT_FALSE(++it);
 }
 
-
 TEST_F(LinkedListTest, IteratorBackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
@@ -190,7 +188,7 @@ TEST_F(LinkedListTest, IteratorCompareTest)
     EXPECT_EQ(it, l.begin());
     EXPECT_NE(++it, l.begin());
     EXPECT_NE(++it, l.end());
-    EXPECT_NE(l.end(), l.end());
+    EXPECT_EQ(l.end(), l.end());
 }
 
 TEST_F(LinkedListTest, IteratorPostIncrementClassTest)
@@ -276,7 +274,7 @@ TEST_F(LinkedListTest, ReverseIteratorCompareTest)
     EXPECT_EQ(it, l.rBegin());
     EXPECT_NE(++it, l.rBegin());
     EXPECT_NE(++it, l.rEnd());
-    EXPECT_NE(l.rEnd(), l.rEnd());
+    EXPECT_EQ(l.rEnd(), l.rEnd());
 }
 
 TEST_F(LinkedListTest, ReverseIteratorPostIncrementClassTest)
@@ -362,7 +360,7 @@ TEST_F(LinkedListTest, ConstIteratorCompareTest)
     EXPECT_EQ(it, l.cBegin());
     EXPECT_NE(++it, l.cBegin());
     EXPECT_NE(++it, l.cEnd());
-    EXPECT_NE(l.cEnd(), l.cEnd());
+    EXPECT_EQ(l.cEnd(), l.cEnd());
 }
 
 TEST_F(LinkedListTest, ConstIteratorPostIncrementClassTest)
@@ -448,7 +446,7 @@ TEST_F(LinkedListTest, ConstReverseIteratorCompareTest)
     EXPECT_EQ(it, l.crBegin());
     EXPECT_NE(++it, l.crBegin());
     EXPECT_NE(++it, l.crEnd());
-    EXPECT_NE(l.crEnd(), l.crEnd());
+    EXPECT_EQ(l.crEnd(), l.crEnd());
 }
 
 TEST_F(LinkedListTest, ConstReverseIteratorPostIncrementClassTest)
@@ -497,6 +495,102 @@ TEST_F(LinkedListTest, ConstReverseIteratorAccesorClassTest)
     EXPECT_FALSE(++it);
 }
 
+TEST_F(LinkedListTest, EqualsClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_EQ(l, l2);
+}
+
+TEST_F(LinkedListTest, EqualsClassTest2)
+{
+    List<TestClass> l;
+    List<TestClass> l2;
+
+    EXPECT_EQ(l, l2);
+}
+
+TEST_F(LinkedListTest, NotEqualsClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l2 = {{11}, {2}, {3}, {4}, {5}};
+
+    EXPECT_NE(l, l2);
+}
+
+TEST_F(LinkedListTest, NotEqualsClassTest2)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}, {0}};
+    List<TestClass> l2 = {{11}, {2}, {3}, {4}, {5}};
+
+    EXPECT_NE(l, l2);
+}
+
+TEST_F(LinkedListTest, LessClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l2 = {{1}, {2}, {3}, {4}, {6}};
+
+    EXPECT_LT(l, l2);
+}
+
+TEST_F(LinkedListTest, LessClassTest2)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}, {6}};
+
+    EXPECT_LT(l, l2);
+}
+
+TEST_F(LinkedListTest, GreatherClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {6}};
+    List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_GT(l, l2);
+}
+
+TEST_F(LinkedListTest, GreatherClassTest2)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}, {6}};
+    List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_GT(l, l2);
+}
+
+TEST_F(LinkedListTest, LessOrEqualClassTest)
+{
+    List<TestClass> l = {{0}, {2}, {3}, {4}, {5}};
+    List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_LE(l, l2);
+}
+
+TEST_F(LinkedListTest, LessOrEqualClassTest2)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_LE(l, l2);
+}
+
+TEST_F(LinkedListTest, GreatherOrEqualClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l2 = {{0}, {2}, {3}, {4}, {5}};
+
+    EXPECT_GE(l, l2);
+}
+
+TEST_F(LinkedListTest, GreatherOrEqualClassTest2)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_GE(l, l2);
+}
+
 TEST_F(LinkedListTest, PushBackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
@@ -505,7 +599,386 @@ TEST_F(LinkedListTest, PushBackClassTest)
     l.pushBack({23});
     l.pushBack({23});
 
-    EXPECT_EQ(l.back(), TestClass{23});
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[5], TestClass{22});
+    EXPECT_EQ(l[6], TestClass{23});
+    EXPECT_EQ(l[7], TestClass{23});
+}
+
+TEST_F(LinkedListTest, PushFrontClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.pushFront({22});
+    l.pushFront({23});
+    l.pushFront({23});
+
+    EXPECT_EQ(l[0], TestClass{23});
+    EXPECT_EQ(l[1], TestClass{23});
+    EXPECT_EQ(l[2], TestClass{22});
+    EXPECT_EQ(l[3], TestClass{1});
+    EXPECT_EQ(l[4], TestClass{2});
+    EXPECT_EQ(l[5], TestClass{3});
+    EXPECT_EQ(l[6], TestClass{4});
+    EXPECT_EQ(l[7], TestClass{5});
+}
+
+TEST_F(LinkedListTest, EmplaceBackClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.emplaceBack(22);
+    l.emplaceBack(23);
+    l.emplaceBack(23);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[5], TestClass{22});
+    EXPECT_EQ(l[6], TestClass{23});
+    EXPECT_EQ(l[7], TestClass{23});
+}
+
+TEST_F(LinkedListTest, EmplaceFrontClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.emplaceFront(22);
+    l.emplaceFront(23);
+    l.emplaceFront(23);
+
+    EXPECT_EQ(l[0], TestClass{23});
+    EXPECT_EQ(l[1], TestClass{23});
+    EXPECT_EQ(l[2], TestClass{22});
+    EXPECT_EQ(l[3], TestClass{1});
+    EXPECT_EQ(l[4], TestClass{2});
+    EXPECT_EQ(l[5], TestClass{3});
+    EXPECT_EQ(l[6], TestClass{4});
+    EXPECT_EQ(l[7], TestClass{5});
+}
+
+TEST_F(LinkedListTest, InsertClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.insert(3, {22});
+    l.insert(3, {23});
+    l.insert(3, {24});
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{24});
+    EXPECT_EQ(l[4], TestClass{23});
+    EXPECT_EQ(l[5], TestClass{22});
+    EXPECT_EQ(l[6], TestClass{4});
+    EXPECT_EQ(l[7], TestClass{5});
+}
+
+TEST_F(LinkedListTest, InsertLastClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.insert(33, {22});
+    l.insert(33, {23});
+    l.insert(33, {24});
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[5], TestClass{22});
+    EXPECT_EQ(l[6], TestClass{23});
+    EXPECT_EQ(l[7], TestClass{24});
+}
+
+TEST_F(LinkedListTest, EmplaceClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.emplace(3, 22);
+    l.emplace(3, 23);
+    l.emplace(3, 24);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{24});
+    EXPECT_EQ(l[4], TestClass{23});
+    EXPECT_EQ(l[5], TestClass{22});
+    EXPECT_EQ(l[6], TestClass{4});
+    EXPECT_EQ(l[7], TestClass{5});
+}
+
+TEST_F(LinkedListTest, EmplaceLastClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.emplace(33, 22);
+    l.emplace(33, 23);
+    l.emplace(33, 24);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[5], TestClass{22});
+    EXPECT_EQ(l[6], TestClass{23});
+    EXPECT_EQ(l[7], TestClass{24});
+}
+
+TEST_F(LinkedListTest, RemoveClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.remove(0);
+    l.remove(2);
+
+    EXPECT_EQ(l[0], TestClass{2});
+    EXPECT_EQ(l[1], TestClass{3});
+    EXPECT_EQ(l[2], TestClass{5});
+
+    EXPECT_EQ(l[0], l.front());
+    EXPECT_EQ(l[2], l.back());
+}
+
+TEST_F(LinkedListTest, RemoveFailClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_THROW(
+        try
+        {
+            l.remove(22);
+        } catch (const std::out_of_range &e)
+        {
+            // and this tests that it has the correct message
+            EXPECT_STREQ("Index: 22 exceeded allowed boundaries, current list size is: 5", e.what());
+            throw;
+        },
+        std::out_of_range);
+}
+
+TEST_F(LinkedListTest, PopFrontClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.popFront();
+    l.popFront();
+
+    EXPECT_EQ(l[0], l.front());
+
+    EXPECT_EQ(l[0], TestClass{3});
+    EXPECT_EQ(l[1], TestClass{4});
+    EXPECT_EQ(l[2], TestClass{5});
+}
+
+TEST_F(LinkedListTest, PopFrontToEmptyClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.popFront();
+    l.popFront();
+    l.popFront();
+    l.popFront();
+
+    EXPECT_EQ(l.back(), l.front());
+    EXPECT_EQ(l[0], TestClass{5});
+
+    l.popFront();
+
+    EXPECT_TRUE(l.empty());
+}
+
+TEST_F(LinkedListTest, PopBackClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.popBack();
+    l.popBack();
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+
+    EXPECT_EQ(l[2], l.back());
+}
+
+TEST_F(LinkedListTest, PopBackToEmptyClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    l.popBack();
+    l.popBack();
+    l.popBack();
+    l.popBack();
+
+    EXPECT_EQ(l.back(), l.front());
+    EXPECT_EQ(l[0], TestClass{1});
+
+    l.popBack();
+
+    EXPECT_TRUE(l.empty());
+}
+
+TEST_F(LinkedListTest, ClearClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_EQ(l.size(), 5);
+    EXPECT_TRUE(l.begin());
+
+    l.clear();
+
+    EXPECT_EQ(l.size(), 0);
+    EXPECT_FALSE(l.begin());
+}
+
+TEST_F(LinkedListTest, SizeClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_EQ(l.size(), 5);
+
+    l.pushBack({22});
+
+    EXPECT_EQ(l.size(), 6);
+
+    l.remove(0);
+    l.remove(0);
+
+    EXPECT_EQ(l.size(), 4);
+}
+
+TEST_F(LinkedListTest, EmptyClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_FALSE(l.empty());
+
+    l.clear();
+
+    EXPECT_TRUE(l.empty());
+}
+
+TEST_F(LinkedListTest, SpawnConstructorClassTest)
+{
+    List<TestClass> l(3, TestClass{1});
+
+    EXPECT_EQ(l.size(), 3);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{1});
+    EXPECT_EQ(l[2], TestClass{1});
+}
+
+TEST_F(LinkedListTest, IteratorConstructorClassTest)
+{
+    std::vector<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l(v.begin(), v.end());
+
+    EXPECT_EQ(l.size(), 5);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
+}
+
+TEST_F(LinkedListTest, CopyConstructorClassTest)
+{
+    List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l(v);
+
+    EXPECT_EQ(l.size(), 5);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
+}
+
+TEST_F(LinkedListTest, MoveConstructorClassTest)
+{
+    List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l(std::move(v));
+
+    EXPECT_TRUE(v.empty());
+    EXPECT_EQ(l.size(), 5);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
+}
+
+TEST_F(LinkedListTest, InitializerListConstructorClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_EQ(l.size(), 5);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
+}
+
+TEST_F(LinkedListTest, AssignmentClassTest)
+{
+    List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l;
+    l = v;
+
+    EXPECT_EQ(l.size(), 5);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
+}
+
+TEST_F(LinkedListTest, MoveAssignmentClassTest)
+{
+    List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l;
+    l = std::move(v);
+
+    EXPECT_TRUE(v.empty());
+    EXPECT_EQ(l.size(), 5);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
+}
+
+TEST_F(LinkedListTest, InitializerListAssignmentClassTest)
+{
+    List<TestClass> l;
+    l = {{1}, {2}, {3}, {4}, {5}};
+
+    EXPECT_EQ(l.size(), 5);
+
+    EXPECT_EQ(l[0], TestClass{1});
+    EXPECT_EQ(l[1], TestClass{2});
+    EXPECT_EQ(l[2], TestClass{3});
+    EXPECT_EQ(l[3], TestClass{4});
+    EXPECT_EQ(l[4], TestClass{5});
 }
 
 TEST_F(LinkedListTest, ConstClassTest)

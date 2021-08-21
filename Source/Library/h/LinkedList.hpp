@@ -20,10 +20,13 @@ private:
 
 public:
     Node() = delete;
+
     template <class... Types>
     Node(Types... args) : _item(args...) {}
     Node(const T &i) : _item(i) {}
     Node(T &&i) : _item(i) {}
+
+    ~Node() = default;
 
     void setNextNode(NodePtr p)
     {
@@ -38,40 +41,19 @@ public:
         }
     }
 
-    NodePtr getNextNode()
-    {
-        return _next;
-    }
+    NodePtr getNextNode() { return _next; }
 
-    ConstNodePtr getNextNode() const
-    {
-        return _next;
-    }
+    ConstNodePtr getNextNode() const { return _next; }
 
-    void setParent(NodePtr parent)
-    {
-        _parent = parent;
-    }
+    void setParent(NodePtr parent) { _parent = parent; }
 
-    NodePtr getParentNode()
-    {
-        return _parent;
-    }
+    NodePtr getParentNode() { return _parent; }
 
-    ConstNodePtr getParentNode() const
-    {
-        return _parent;
-    }
+    ConstNodePtr getParentNode() const { return _parent; }
 
-    T &getItem()
-    {
-        return _item;
-    }
+    T &getItem() { return _item; }
 
-    const T &getItem() const
-    {
-        return _item;
-    }
+    const T &getItem() const { return _item; }
 };
 
 template <typename T>
@@ -101,7 +83,7 @@ public:
 
     operator bool() const { return _ptr; }
 
-    bool operator==(const ListIterator<T> &rawIterator) const { return *this && rawIterator && (_ptr == rawIterator._ptr); }
+    bool operator==(const ListIterator<T> &rawIterator) const { return _ptr == rawIterator._ptr; }
     bool operator!=(const ListIterator<T> &rawIterator) const { return !(*this == rawIterator); }
 
     ListIterator<T> &operator++()
@@ -164,7 +146,7 @@ public:
 
     operator bool() const { return _ptr; }
 
-    bool operator==(const ListReverseIterator<T> &rawIterator) const { return *this && rawIterator && (_ptr == rawIterator._ptr); }
+    bool operator==(const ListReverseIterator<T> &rawIterator) const { return _ptr == rawIterator._ptr; }
     bool operator!=(const ListReverseIterator<T> &rawIterator) const { return !(*this == rawIterator); }
 
     ListReverseIterator<T> &operator++()
@@ -212,11 +194,11 @@ private:
     size_t _size = 0;
 
 public:
-    typedef ListIterator<T> Iterator;
-    typedef ListIterator<const T> ConstIterator;
+    using Iterator = ListIterator<T>;
+    using ConstIterator = ListIterator<const T>;
 
-    typedef ListReverseIterator<T> ReverseIterator;
-    typedef ListReverseIterator<const T> ConstReverseIterator;
+    using ReverseIterator = ListReverseIterator<T>;
+    using ConstReverseIterator = ListReverseIterator<const T>;
 
     // Constructors
     List() = default;
@@ -232,9 +214,9 @@ public:
     template <class InputIt>
     List(InputIt first, InputIt last)
     {
-        for (auto it = first; it != last; ++it)
+        for (InputIt it = first; it != last; ++it)
         {
-            pushBack(*it);
+            pushBack((*it));
         }
     }
 
@@ -249,12 +231,12 @@ public:
 
     List(List<T> &&other)
     {
-        auto end = other.end();
-        for (auto it = other.begin(); it != end; ++it)
-        {
-            pushBack(std::move(*it));
-        }
-        other.clear();
+        _head = other._head;
+        _tail = other._tail;
+        _size = other._size;
+        other._head = nullptr;
+        other._tail = nullptr;
+        other._size = 0;
     }
 
     List(std::initializer_list<T> init)
@@ -281,12 +263,12 @@ public:
 
     List<T> &operator=(List<T> &&other)
     {
-        auto end = other.end();
-        for (auto it = other.begin(); it != end; ++it)
-        {
-            pushBack(std::move(*it));
-        }
-        other.clear();
+        _head = other._head;
+        _tail = other._tail;
+        _size = other._size;
+        other._head = nullptr;
+        other._tail = nullptr;
+        other._size = 0;
         return *this;
     }
 
@@ -313,15 +295,9 @@ public:
         return ptr->getItem();
     }
 
-    T &operator[](size_t index)
-    {
-        return at(index);
-    }
+    T &operator[](size_t index) { return at(index); }
 
-    const T &operator[](size_t index) const
-    {
-        return at(index);
-    }
+    const T &operator[](size_t index) const { return at(index); }
 
     T &front()
     {
@@ -348,58 +324,39 @@ public:
     }
 
     // Modifiers
-    void pushBack(const T &item)
-    {
-        insertNode(size(), makeNode(item));
-    }
+    void pushBack(const T &item) { insertNode(size(), makeNode(item)); }
 
-    void pushBack(T &&item)
-    {
-        insertNode(size(), makeNode(std::move(item)));
-    }
+    void pushBack(T &&item) { insertNode(size(), makeNode(std::move(item))); }
+
+    void pushFront(const T &item) { insertNode(0, makeNode(item)); }
+
+    void pushFront(T &&item) { insertNode(0, makeNode(std::move(item))); }
 
     template <class... Types>
-    void emplaceBack(Types... args)
-    {
-        insertNode(size(), makeNodeWithItem(args...));
-    }
+    void emplaceBack(Types... args) { insertNode(size(), makeNodeWithItem(args...)); }
 
     template <class... Types>
-    void emplace(size_t index, Types... args)
-    {
-        insertNode(index, makeNodeWithItem(args...));
-    }
+    void emplaceFront(Types... args) { insertNode(0, makeNodeWithItem(args...)); }
 
-    void insert(size_t index, const T &item)
-    {
-        insertNode(index, makeNode(item));
-    }
+    template <class... Types>
+    void emplace(size_t index, Types... args) { insertNode(index, makeNodeWithItem(args...)); }
 
-    void insert(size_t index, T &&item)
-    {
-        insertNode(index, makeNode(std::move(item)));
-    }
+    void insert(size_t index, const T &item) { insertNode(index, makeNode(item)); }
 
-    void remove(size_t index)
-    {
-        removeNode(index);
-    }
+    void insert(size_t index, T &&item) { insertNode(index, makeNode(std::move(item))); }
 
-    void clear()
-    {
-        removeAllNodes();
-    }
+    void remove(size_t index) { removeNode(index); }
+
+    void popFront() { removeNode(0); }
+
+    void popBack() { removeNode(size() - 1); }
+
+    void clear() { removeAllNodes(); }
 
     // Capacity
-    size_t size() const
-    {
-        return _size;
-    }
+    size_t size() const { return _size; }
 
-    bool empty() const
-    {
-        return size() == 0;
-    }
+    bool empty() const { return size() == 0; }
 
     // Iterators
     Iterator begin() { return Iterator(_head); }
@@ -447,33 +404,34 @@ private:
         return ptr;
     }
 
-    NodePtr getNode(size_t index)
-    {
-        return const_cast<NodePtr>(getConstNode(index));
-    }
+    NodePtr getNode(size_t index) { return const_cast<NodePtr>(getConstNode(index)); }
 
     void removeNode(size_t index)
     {
         indexGuard(index);
-        if (index == 0)
+        if (index == 0) // pop front
         {
-            auto tmp = _head->getNextNode();
+            NodePtr tmp = _head->getNextNode();
             deleteNode(_head);
-            _head = tmp;
-            _head->setParent(nullptr);
+            setHead(tmp);
+            if (size() == 0)
+            {
+                setTail(tmp);
+            }
+        }
+        else if (index == size() - 1) // pop back
+        {
+            NodePtr tmp = _tail->getParentNode();
+            deleteNode(_tail);
+            setTail(tmp);
         }
         else
         {
-            NodePtr previous = getNode(index - 1);
-            if (NodePtr toRemove = previous->getNextNode())
-            {
-                previous->setNextNode(toRemove->getNextNode());
-                deleteNode(toRemove);
-            }
-            else
-            {
-                assertPointner(nullptr);
-            }
+            NodePtr next = getNode(index + 1);
+            NodePtr toRemove = next->getParentNode();
+            NodePtr previous = toRemove->getParentNode();
+            previous->setNextNode(next);
+            deleteNode(toRemove);
         }
         --_size;
     }
@@ -484,31 +442,27 @@ private:
         {
             index = size(); // push back
         }
-        if (index == 0)
+        if (index == 0) // insert at front
         {
-            auto tmp = _head;
-            _head = node;
+            NodePtr tmp = _head;
+            setHead(node);
             _head->setNextNode(tmp);
-            _head->setParent(nullptr);
             if (size() == 0)
             {
-                _tail = _head;
+                setTail(_head);
             }
+        }
+        else if (index == size()) // insert at back
+        {
+            _tail->setNextNode(node);
+            setTail(node);
         }
         else
         {
-            NodePtr previous = getNode(index - 1);
-            if (auto toMove = previous->getNextNode())
-            {
-                auto tmp = toMove;
-                previous->setNextNode(node);
-                node->setNextNode(tmp);
-            }
-            else
-            {
-                previous->setNextNode(node);
-                _tail = node;
-            }
+            NodePtr toMove = getNode(index);
+            NodePtr previous = toMove->getParentNode();
+            previous->setNextNode(node);
+            node->setNextNode(toMove);
         }
         ++_size;
     }
@@ -553,81 +507,50 @@ private:
         }
     }
 
-    NodePtr makeNode(const T &item)
+    void setHead(NodePtr ptr)
     {
-        return new Node<T>(item);
+        _head = ptr;
+        if (_head)
+        {
+            _head->setParent(nullptr);
+        }
     }
 
-    NodePtr makeNode(T &&item)
+    void setTail(NodePtr ptr)
     {
-        return new Node<T>(std::move(item));
+        _tail = ptr;
+        if (_tail)
+        {
+            _tail->setNextNode(nullptr);
+        }
     }
+
+    NodePtr makeNode(const T &item) { return new Node<T>(item); }
+
+    NodePtr makeNode(T &&item) { return new Node<T>(std::move(item)); }
 
     template <class... Types>
-    NodePtr makeNodeWithItem(Types... args)
-    {
-        return new Node<T>(args...);
-    }
+    NodePtr makeNodeWithItem(Types... args) { return new Node<T>(args...); }
 
-    void deleteNode(NodePtr ptr)
-    {
-        delete ptr;
-    }
+    void deleteNode(NodePtr ptr) { delete ptr; }
 };
-template <class T>
-bool operator==(const List<T> &lhs, const List<T> &rhs)
-{
-    if (lhs.size() != rhs.size())
-    {
-        return false;
-    }
-
-    auto lIt = lhs.begin(), rIt = rhs.begin();
-    auto lEnd = lhs.end(), rEnd = rhs.end();
-
-    for (; lIt != lEnd || rIt != rEnd(); ++lIt, ++rIt)
-    {
-        if (*lIt == *rIt)
-        {
-            continue;
-        }
-        return false;
-    }
-    return true;
-}
 
 template <class T>
-bool operator!=(const List<T> &lhs, const List<T> &rhs)
-{
-    if (lhs.size() != rhs.size())
-    {
-        return true;
-    }
-
-    auto lIt = lhs.begin(), rIt = rhs.begin();
-    auto lEnd = lhs.end(), rEnd = rhs.end();
-
-    for (; lIt != lEnd || rIt != rEnd(); ++lIt, ++rIt)
-    {
-        if (*lIt != *rIt)
-        {
-            continue;
-        }
-        return false;
-    }
-    return true;
-}
+bool operator==(const List<T> &lhs, const List<T> &rhs) { return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
 
 template <class T>
-bool operator<(const List<T> &lhs, const List<T> &rhs);
+bool operator!=(const List<T> &lhs, const List<T> &rhs) { return !(lhs == rhs); }
 
 template <class T>
-bool operator<=(const List<T> &lhs, const List<T> &rhs);
+bool operator<(const List<T> &lhs, const List<T> &rhs) { return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
 
 template <class T>
-bool operator>(const List<T> &lhs, const List<T> &rhs);
+bool operator<=(const List<T> &lhs, const List<T> &rhs) { return lhs < rhs || lhs == rhs; }
 
 template <class T>
-bool operator>=(const List<T> &lhs, const List<T> &rhs);
+bool operator>(const List<T> &lhs, const List<T> &rhs) { return std::lexicographical_compare(rhs.begin(), rhs.end(), lhs.begin(), lhs.end()); }
+
+template <class T>
+bool operator>=(const List<T> &lhs, const List<T> &rhs) { return lhs > rhs || lhs == rhs; }
 
 void linkedMain();

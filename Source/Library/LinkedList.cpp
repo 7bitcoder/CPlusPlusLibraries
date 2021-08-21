@@ -22,10 +22,6 @@ void printAll(const List<T> &list)
 
 void linkedMain()
 {
-    const std::vector<int> l;
-
-    l.begin();
-
     List<int> list;
 
     list.pushBack(1);

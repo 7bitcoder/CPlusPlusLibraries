@@ -1,8 +1,5 @@
 #pragma once
 #include <iostream>
-#include <exception>
-#include <memory>
-#include <vector>
 #include <format>
 
 template <class T>
@@ -363,15 +360,9 @@ public:
     }
 
     void swap(List<T> &other) {
-        auto tmpHead = _head;
-        auto tmpTail = _tail;
-        auto tmpSize = _size;
-        _head = other._head;
-        _tail = other._tail;
-        _size = other._size;
-        other._head = tmpHead;
-        other._tail = tmpTail;
-        other._size = tmpSize;
+        auto tmp{std::move(*this)};
+        *this = std::move(other);
+        other = std::move(tmp);
     }
 
     void clear() { removeAllNodes(); }
@@ -435,9 +426,9 @@ private:
         {
             index = size(); // push back
         }
-        if (index == 0) // insert at front
+        if (index == 0) // push front
         {
-            NodePtr tmp = _head;
+            auto tmp = _head;
             setHead(node);
             _head->setNextNode(tmp);
             if (size() == 0)
@@ -445,15 +436,15 @@ private:
                 setTail(_head);
             }
         }
-        else if (index == size()) // insert at back
+        else if (index == size()) // push back
         {
             _tail->setNextNode(node);
             setTail(node);
         }
         else
         {
-            NodePtr toMove = getNode(index);
-            NodePtr previous = toMove->getParentNode();
+            auto toMove = getNode(index);
+            auto previous = toMove->getParentNode();
             previous->setNextNode(node);
             node->setNextNode(toMove);
         }
@@ -465,7 +456,7 @@ private:
         assertIndex(index);
         if (index == 0) // pop front
         {
-            NodePtr tmp = _head->getNextNode();
+            auto tmp = _head->getNextNode();
             deleteNode(_head);
             setHead(tmp);
             if (size() == 1)
@@ -475,15 +466,15 @@ private:
         }
         else if (index == size() - 1) // pop back
         {
-            NodePtr tmp = _tail->getParentNode();
+            auto tmp = _tail->getParentNode();
             deleteNode(_tail);
             setTail(tmp);
         }
         else
         {
-            NodePtr next = getNode(index + 1);
-            NodePtr toRemove = next->getParentNode();
-            NodePtr previous = toRemove->getParentNode();
+            auto next = getNode(index + 1);
+            auto toRemove = next->getParentNode();
+            auto previous = toRemove->getParentNode();
             previous->setNextNode(next);
             deleteNode(toRemove);
         }
@@ -493,7 +484,7 @@ private:
     void removeAllNodes()
     {
         auto index = size();
-        NodePtr ptr = _head;
+        auto ptr = _head;
         while (index--)
         {
             assertPointner(ptr);

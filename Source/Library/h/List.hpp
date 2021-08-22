@@ -53,7 +53,7 @@ public:
     const T &getItem() const { return _item; }
 };
 
-template <class T, bool R>
+template <class T, bool R> // R = Reverse
 class ListIterator
 {
 public:
@@ -61,7 +61,7 @@ public:
     using value_type = T;
     using pointer = T *;
     using reference = T &;
-    using NodePtr = typename std::conditional<std::is_const<T>::value, const Node<typename std::remove_cv<T>::type> *, Node<T> *>::type;
+    using NodePtr = std::conditional_t<std::is_const<T>::value, const Node<std::remove_cv_t<T>> *, Node<T> *>;
 
 protected:
     NodePtr _ptr = nullptr;
@@ -69,7 +69,7 @@ protected:
 public:
     ListIterator(NodePtr ptr = nullptr) { _ptr = ptr; }
     ListIterator(const ListIterator<T, R> &rawIterator) = default;
-    ~ListIterator() {}
+    ~ListIterator() = default;
 
     ListIterator<T, R> &operator=(const ListIterator<T, R> &rawIterator) = default;
     ListIterator<T, R> &operator=(NodePtr ptr)

@@ -798,6 +798,23 @@ TEST_F(LinkedListTest, PopFrontToEmptyClassTest)
     EXPECT_TRUE(l.empty());
 }
 
+TEST_F(LinkedListTest, PopFrontFailClassTest)
+{
+    List<TestClass> l;
+
+    EXPECT_THROW(
+        try
+        {
+            l.popFront();
+        } catch (const std::runtime_error &e)
+        {
+            // and this tests that it has the correct message
+            EXPECT_STREQ("List is empty", e.what());
+            throw;
+        },
+        std::runtime_error);
+}
+
 TEST_F(LinkedListTest, PopBackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
@@ -827,6 +844,23 @@ TEST_F(LinkedListTest, PopBackToEmptyClassTest)
     l.popBack();
 
     EXPECT_TRUE(l.empty());
+}
+
+TEST_F(LinkedListTest, PopBackFailClassTest)
+{
+    List<TestClass> l;
+
+    EXPECT_THROW(
+        try
+        {
+            l.popBack();
+        } catch (const std::runtime_error &e)
+        {
+            // and this tests that it has the correct message
+            EXPECT_STREQ("List is empty", e.what());
+            throw;
+        },
+        std::runtime_error);
 }
 
 TEST_F(LinkedListTest, ClearClassTest)

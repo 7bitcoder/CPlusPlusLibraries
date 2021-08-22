@@ -49,5 +49,6 @@ void linkedMain()
     list.front();
 
     list.clear();
+    list.clear();
     printAll(list);
 }

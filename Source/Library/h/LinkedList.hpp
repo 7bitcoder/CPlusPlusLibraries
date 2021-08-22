@@ -64,18 +64,18 @@ public:
     using value_type = T;
     using pointer = T *;
     using reference = T &;
-    using Ptr = typename std::conditional<std::is_const<T>::value, const Node<typename std::remove_cv<T>::type> *, Node<T> *>::type;
+    using NodePtr = typename std::conditional<std::is_const<T>::value, const Node<typename std::remove_cv<T>::type> *, Node<T> *>::type;
 
 protected:
-    Ptr _ptr;
+    NodePtr _ptr = nullptr;
 
 public:
-    ListIterator(Ptr ptr = nullptr) { _ptr = ptr; }
+    ListIterator(NodePtr ptr = nullptr) { _ptr = ptr; }
     ListIterator(const ListIterator<T> &rawIterator) = default;
     ~ListIterator() {}
 
     ListIterator<T> &operator=(const ListIterator<T> &rawIterator) = default;
-    ListIterator<T> &operator=(Ptr ptr)
+    ListIterator<T> &operator=(NodePtr ptr)
     {
         _ptr = ptr;
         return (*this);
@@ -84,7 +84,7 @@ public:
     operator bool() const { return _ptr; }
 
     bool operator==(const ListIterator<T> &rawIterator) const { return _ptr == rawIterator._ptr; }
-    bool operator!=(const ListIterator<T> &rawIterator) const { return !(*this == rawIterator); }
+    bool operator!=(const ListIterator<T> &rawIterator) const { return _ptr != rawIterator._ptr; }
 
     ListIterator<T> &operator++()
     {
@@ -127,18 +127,18 @@ public:
     using value_type = T;
     using pointer = T *;
     using reference = T &;
-    using Ptr = typename std::conditional<std::is_const<T>::value, const Node<typename std::remove_cv<T>::type> *, Node<T> *>::type;
+    using NodePtr = typename std::conditional<std::is_const<T>::value, const Node<typename std::remove_cv<T>::type> *, Node<T> *>::type;
 
 protected:
-    Ptr _ptr;
+    NodePtr _ptr = nullptr;
 
 public:
-    ListReverseIterator(Ptr ptr = nullptr) { _ptr = ptr; }
+    ListReverseIterator(NodePtr ptr = nullptr) { _ptr = ptr; }
     ListReverseIterator(const ListReverseIterator<T> &rawIterator) = default;
     ~ListReverseIterator() {}
 
     ListReverseIterator<T> &operator=(const ListReverseIterator<T> &rawIterator) = default;
-    ListReverseIterator<T> &operator=(Ptr ptr)
+    ListReverseIterator<T> &operator=(NodePtr ptr)
     {
         _ptr = ptr;
         return (*this);
@@ -147,7 +147,7 @@ public:
     operator bool() const { return _ptr; }
 
     bool operator==(const ListReverseIterator<T> &rawIterator) const { return _ptr == rawIterator._ptr; }
-    bool operator!=(const ListReverseIterator<T> &rawIterator) const { return !(*this == rawIterator); }
+    bool operator!=(const ListReverseIterator<T> &rawIterator) const { return _ptr != rawIterator._ptr; }
 
     ListReverseIterator<T> &operator++()
     {
@@ -253,6 +253,7 @@ public:
     // Assign
     List<T> &operator=(const List<T> &other)
     {
+        clear();
         auto end = other.end();
         for (auto it = other.begin(); it != end; ++it)
         {
@@ -263,6 +264,7 @@ public:
 
     List<T> &operator=(List<T> &&other)
     {
+        clear();
         _head = other._head;
         _tail = other._tail;
         _size = other._size;
@@ -274,6 +276,7 @@ public:
 
     List<T> &operator=(std::initializer_list<T> ilist)
     {
+        clear();
         auto end = ilist.end();
         for (auto it = ilist.begin(); it != end; ++it)
         {
@@ -347,9 +350,17 @@ public:
 
     void remove(size_t index) { removeNode(index); }
 
-    void popFront() { removeNode(0); }
+    void popFront()
+    {
+        assertEmpty();
+        removeNode(0);
+    }
 
-    void popBack() { removeNode(size() - 1); }
+    void popBack()
+    {
+        assertEmpty();
+        removeNode(size() - 1);
+    }
 
     void clear() { removeAllNodes(); }
 
@@ -359,28 +370,30 @@ public:
     bool empty() const { return size() == 0; }
 
     // Iterators
-    Iterator begin() { return Iterator(_head); }
-    Iterator end() { return Iterator(nullptr); }
+    Iterator begin() { return Iterator{_head}; }
+    Iterator end() { return Iterator{}; }
 
-    ConstIterator begin() const { return ConstIterator(const_cast<NodePtr>(_head)); }
-    ConstIterator end() const { return ConstIterator(); }
+    ConstIterator begin() const { return ConstIterator{const_cast<NodePtr>(_head)}; }
+    ConstIterator end() const { return ConstIterator{}; }
 
-    ConstIterator cBegin() const { return ConstIterator(const_cast<NodePtr>(_head)); }
-    ConstIterator cEnd() const { return ConstIterator(); }
+    ConstIterator cBegin() const { return ConstIterator{const_cast<NodePtr>(_head)}; }
+    ConstIterator cEnd() const { return ConstIterator{}; }
 
-    ReverseIterator rBegin() { return ReverseIterator(_tail); }
-    ReverseIterator rEnd() { return ReverseIterator(); }
+    ReverseIterator rBegin() { return ReverseIterator{_tail}; }
+    ReverseIterator rEnd() { return ReverseIterator{}; }
 
-    ConstReverseIterator rBegin() const { return ConstReverseIterator(const_cast<NodePtr>(_tail)); }
-    ConstReverseIterator rEnd() const { return ConstReverseIterator(); }
+    ConstReverseIterator rBegin() const { return ConstReverseIterator{const_cast<NodePtr>(_tail)}; }
+    ConstReverseIterator rEnd() const { return ConstReverseIterator{}; }
 
-    ConstReverseIterator crBegin() const { return ConstReverseIterator(const_cast<NodePtr>(_tail)); }
-    ConstReverseIterator crEnd() const { return ConstReverseIterator(); }
+    ConstReverseIterator crBegin() const { return ConstReverseIterator{const_cast<NodePtr>(_tail)}; }
+    ConstReverseIterator crEnd() const { return ConstReverseIterator{}; }
 
 private:
+    NodePtr getNode(size_t index) { return const_cast<NodePtr>(getConstNode(index)); }
+
     ConstNodePtr getConstNode(size_t index) const
     {
-        indexGuard(index);
+        assertIndex(index);
         NodePtr ptr = nullptr;
         if (index <= size() / 2)
         {
@@ -402,38 +415,6 @@ private:
             }
         }
         return ptr;
-    }
-
-    NodePtr getNode(size_t index) { return const_cast<NodePtr>(getConstNode(index)); }
-
-    void removeNode(size_t index)
-    {
-        indexGuard(index);
-        if (index == 0) // pop front
-        {
-            NodePtr tmp = _head->getNextNode();
-            deleteNode(_head);
-            setHead(tmp);
-            if (size() == 0)
-            {
-                setTail(tmp);
-            }
-        }
-        else if (index == size() - 1) // pop back
-        {
-            NodePtr tmp = _tail->getParentNode();
-            deleteNode(_tail);
-            setTail(tmp);
-        }
-        else
-        {
-            NodePtr next = getNode(index + 1);
-            NodePtr toRemove = next->getParentNode();
-            NodePtr previous = toRemove->getParentNode();
-            previous->setNextNode(next);
-            deleteNode(toRemove);
-        }
-        --_size;
     }
 
     void insertNode(size_t index, NodePtr node)
@@ -467,6 +448,36 @@ private:
         ++_size;
     }
 
+    void removeNode(size_t index)
+    {
+        assertIndex(index);
+        if (index == 0) // pop front
+        {
+            NodePtr tmp = _head->getNextNode();
+            deleteNode(_head);
+            setHead(tmp);
+            if (size() == 1)
+            {
+                setTail(tmp);
+            }
+        }
+        else if (index == size() - 1) // pop back
+        {
+            NodePtr tmp = _tail->getParentNode();
+            deleteNode(_tail);
+            setTail(tmp);
+        }
+        else
+        {
+            NodePtr next = getNode(index + 1);
+            NodePtr toRemove = next->getParentNode();
+            NodePtr previous = toRemove->getParentNode();
+            previous->setNextNode(next);
+            deleteNode(toRemove);
+        }
+        --_size;
+    }
+
     void removeAllNodes()
     {
         auto index = size();
@@ -483,7 +494,7 @@ private:
         _size = 0;
     }
 
-    void indexGuard(size_t index) const
+    void assertIndex(size_t index) const
     {
         if (index + 1 > size())
         {

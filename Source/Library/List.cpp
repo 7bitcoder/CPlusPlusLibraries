@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <numeric>
 
-#include "LinkedList.hpp"
+#include "List.hpp"
 
 
 template <class T>

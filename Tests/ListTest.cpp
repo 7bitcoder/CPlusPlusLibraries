@@ -2,20 +2,20 @@
 #include <thread>
 #include <gtest/gtest.h>
 
-#include "LinkedList.hpp"
+#include "List.hpp"
 
-class LinkedListTest : public ::testing::Test
+class ListTest : public ::testing::Test
 {
 protected:
     static void SetUpTestSuite() {}
 
-    LinkedListTest() {}
+    ListTest() {}
 
     void SetUp() override {}
 
     void TearDown() override {}
 
-    ~LinkedListTest() {}
+    ~ListTest() {}
 
     static void TearDownTestSuite() {}
 };
@@ -33,7 +33,7 @@ bool operator>(const TestClass &cl1, const TestClass &cl2) { return cl1.field > 
 bool operator<=(const TestClass &cl1, const TestClass &cl2) { return cl1.field <= cl2.field; }
 bool operator>=(const TestClass &cl1, const TestClass &cl2) { return cl1.field >= cl2.field; }
 
-TEST_F(LinkedListTest, AtTest)
+TEST_F(ListTest, AtTest)
 {
     List<int> l = {1, 2, 3, 4, 5};
 
@@ -57,7 +57,7 @@ TEST_F(LinkedListTest, AtTest)
         std::out_of_range);
 }
 
-TEST_F(LinkedListTest, AtOperatorTest)
+TEST_F(ListTest, AtOperatorTest)
 {
     List<int> l = {1, 2, 3, 4, 5};
 
@@ -81,7 +81,7 @@ TEST_F(LinkedListTest, AtOperatorTest)
         std::out_of_range);
 }
 
-TEST_F(LinkedListTest, AtOperatorClassTest)
+TEST_F(ListTest, AtOperatorClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -105,14 +105,14 @@ TEST_F(LinkedListTest, AtOperatorClassTest)
         std::out_of_range);
 }
 
-TEST_F(LinkedListTest, FrontClassTest)
+TEST_F(ListTest, FrontClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
     EXPECT_EQ(l.front(), TestClass{1});
 }
 
-TEST_F(LinkedListTest, FrontClassFailTest)
+TEST_F(ListTest, FrontClassFailTest)
 {
     List<TestClass> l;
 
@@ -128,14 +128,14 @@ TEST_F(LinkedListTest, FrontClassFailTest)
         std::runtime_error);
 }
 
-TEST_F(LinkedListTest, BackClassTest)
+TEST_F(ListTest, BackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
     EXPECT_EQ(l.back(), TestClass{5});
 }
 
-TEST_F(LinkedListTest, BackClassFailTest)
+TEST_F(ListTest, BackClassFailTest)
 {
     List<TestClass> l;
 
@@ -151,7 +151,7 @@ TEST_F(LinkedListTest, BackClassFailTest)
         std::runtime_error);
 }
 
-TEST_F(LinkedListTest, IteratorClassTest)
+TEST_F(ListTest, IteratorClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -164,7 +164,7 @@ TEST_F(LinkedListTest, IteratorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(LinkedListTest, IteratorBackClassTest)
+TEST_F(ListTest, IteratorBackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -180,7 +180,7 @@ TEST_F(LinkedListTest, IteratorBackClassTest)
     EXPECT_FALSE(++(++it));
 }
 
-TEST_F(LinkedListTest, IteratorCompareTest)
+TEST_F(ListTest, IteratorCompareTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -191,7 +191,7 @@ TEST_F(LinkedListTest, IteratorCompareTest)
     EXPECT_EQ(l.end(), l.end());
 }
 
-TEST_F(LinkedListTest, IteratorPostIncrementClassTest)
+TEST_F(ListTest, IteratorPostIncrementClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -205,7 +205,7 @@ TEST_F(LinkedListTest, IteratorPostIncrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(LinkedListTest, IteratorPostDecrementClassTest)
+TEST_F(ListTest, IteratorPostDecrementClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -224,7 +224,7 @@ TEST_F(LinkedListTest, IteratorPostDecrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(LinkedListTest, IteratorAccesorClassTest)
+TEST_F(ListTest, IteratorAccesorClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -237,7 +237,7 @@ TEST_F(LinkedListTest, IteratorAccesorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(LinkedListTest, ReverseIteratorClassTest)
+TEST_F(ListTest, ReverseIteratorClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -250,7 +250,7 @@ TEST_F(LinkedListTest, ReverseIteratorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(LinkedListTest, ReverseIteratorBackClassTest)
+TEST_F(ListTest, ReverseIteratorBackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -266,7 +266,7 @@ TEST_F(LinkedListTest, ReverseIteratorBackClassTest)
     EXPECT_FALSE(++(++it));
 }
 
-TEST_F(LinkedListTest, ReverseIteratorCompareTest)
+TEST_F(ListTest, ReverseIteratorCompareTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -277,7 +277,7 @@ TEST_F(LinkedListTest, ReverseIteratorCompareTest)
     EXPECT_EQ(l.rEnd(), l.rEnd());
 }
 
-TEST_F(LinkedListTest, ReverseIteratorPostIncrementClassTest)
+TEST_F(ListTest, ReverseIteratorPostIncrementClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -291,7 +291,7 @@ TEST_F(LinkedListTest, ReverseIteratorPostIncrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(LinkedListTest, ReverseIteratorPostDecrementClassTest)
+TEST_F(ListTest, ReverseIteratorPostDecrementClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -310,7 +310,7 @@ TEST_F(LinkedListTest, ReverseIteratorPostDecrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(LinkedListTest, ReverseIteratorAccesorClassTest)
+TEST_F(ListTest, ReverseIteratorAccesorClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -323,7 +323,7 @@ TEST_F(LinkedListTest, ReverseIteratorAccesorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(LinkedListTest, ConstIteratorClassTest)
+TEST_F(ListTest, ConstIteratorClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -336,7 +336,7 @@ TEST_F(LinkedListTest, ConstIteratorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(LinkedListTest, ConstIteratorBackClassTest)
+TEST_F(ListTest, ConstIteratorBackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -352,7 +352,7 @@ TEST_F(LinkedListTest, ConstIteratorBackClassTest)
     EXPECT_FALSE(++(++it));
 }
 
-TEST_F(LinkedListTest, ConstIteratorCompareTest)
+TEST_F(ListTest, ConstIteratorCompareTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -363,7 +363,7 @@ TEST_F(LinkedListTest, ConstIteratorCompareTest)
     EXPECT_EQ(l.cEnd(), l.cEnd());
 }
 
-TEST_F(LinkedListTest, ConstIteratorPostIncrementClassTest)
+TEST_F(ListTest, ConstIteratorPostIncrementClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -377,7 +377,7 @@ TEST_F(LinkedListTest, ConstIteratorPostIncrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(LinkedListTest, ConstIteratorPostDecrementClassTest)
+TEST_F(ListTest, ConstIteratorPostDecrementClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -396,7 +396,7 @@ TEST_F(LinkedListTest, ConstIteratorPostDecrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(LinkedListTest, ConstIteratorAccesorClassTest)
+TEST_F(ListTest, ConstIteratorAccesorClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -409,7 +409,7 @@ TEST_F(LinkedListTest, ConstIteratorAccesorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(LinkedListTest, ConstReverseIteratorClassTest)
+TEST_F(ListTest, ConstReverseIteratorClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -422,7 +422,7 @@ TEST_F(LinkedListTest, ConstReverseIteratorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(LinkedListTest, ConstReverseIteratorBackClassTest)
+TEST_F(ListTest, ConstReverseIteratorBackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -438,7 +438,7 @@ TEST_F(LinkedListTest, ConstReverseIteratorBackClassTest)
     EXPECT_FALSE(++(++it));
 }
 
-TEST_F(LinkedListTest, ConstReverseIteratorCompareTest)
+TEST_F(ListTest, ConstReverseIteratorCompareTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -449,7 +449,7 @@ TEST_F(LinkedListTest, ConstReverseIteratorCompareTest)
     EXPECT_EQ(l.crEnd(), l.crEnd());
 }
 
-TEST_F(LinkedListTest, ConstReverseIteratorPostIncrementClassTest)
+TEST_F(ListTest, ConstReverseIteratorPostIncrementClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -463,7 +463,7 @@ TEST_F(LinkedListTest, ConstReverseIteratorPostIncrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(LinkedListTest, ConstReverseIteratorPostDecrementClassTest)
+TEST_F(ListTest, ConstReverseIteratorPostDecrementClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -482,7 +482,7 @@ TEST_F(LinkedListTest, ConstReverseIteratorPostDecrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(LinkedListTest, ConstReverseIteratorAccesorClassTest)
+TEST_F(ListTest, ConstReverseIteratorAccesorClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -495,7 +495,7 @@ TEST_F(LinkedListTest, ConstReverseIteratorAccesorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(LinkedListTest, EqualsClassTest)
+TEST_F(ListTest, EqualsClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -503,7 +503,7 @@ TEST_F(LinkedListTest, EqualsClassTest)
     EXPECT_EQ(l, l2);
 }
 
-TEST_F(LinkedListTest, EqualsClassTest2)
+TEST_F(ListTest, EqualsClassTest2)
 {
     List<TestClass> l;
     List<TestClass> l2;
@@ -511,7 +511,7 @@ TEST_F(LinkedListTest, EqualsClassTest2)
     EXPECT_EQ(l, l2);
 }
 
-TEST_F(LinkedListTest, NotEqualsClassTest)
+TEST_F(ListTest, NotEqualsClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l2 = {{11}, {2}, {3}, {4}, {5}};
@@ -519,7 +519,7 @@ TEST_F(LinkedListTest, NotEqualsClassTest)
     EXPECT_NE(l, l2);
 }
 
-TEST_F(LinkedListTest, NotEqualsClassTest2)
+TEST_F(ListTest, NotEqualsClassTest2)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}, {0}};
     List<TestClass> l2 = {{11}, {2}, {3}, {4}, {5}};
@@ -527,7 +527,7 @@ TEST_F(LinkedListTest, NotEqualsClassTest2)
     EXPECT_NE(l, l2);
 }
 
-TEST_F(LinkedListTest, LessClassTest)
+TEST_F(ListTest, LessClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l2 = {{1}, {2}, {3}, {4}, {6}};
@@ -535,7 +535,7 @@ TEST_F(LinkedListTest, LessClassTest)
     EXPECT_LT(l, l2);
 }
 
-TEST_F(LinkedListTest, LessClassTest2)
+TEST_F(ListTest, LessClassTest2)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}, {6}};
@@ -543,7 +543,7 @@ TEST_F(LinkedListTest, LessClassTest2)
     EXPECT_LT(l, l2);
 }
 
-TEST_F(LinkedListTest, GreatherClassTest)
+TEST_F(ListTest, GreatherClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {6}};
     List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -551,7 +551,7 @@ TEST_F(LinkedListTest, GreatherClassTest)
     EXPECT_GT(l, l2);
 }
 
-TEST_F(LinkedListTest, GreatherClassTest2)
+TEST_F(ListTest, GreatherClassTest2)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}, {6}};
     List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -559,7 +559,7 @@ TEST_F(LinkedListTest, GreatherClassTest2)
     EXPECT_GT(l, l2);
 }
 
-TEST_F(LinkedListTest, LessOrEqualClassTest)
+TEST_F(ListTest, LessOrEqualClassTest)
 {
     List<TestClass> l = {{0}, {2}, {3}, {4}, {5}};
     List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -567,7 +567,7 @@ TEST_F(LinkedListTest, LessOrEqualClassTest)
     EXPECT_LE(l, l2);
 }
 
-TEST_F(LinkedListTest, LessOrEqualClassTest2)
+TEST_F(ListTest, LessOrEqualClassTest2)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -575,7 +575,7 @@ TEST_F(LinkedListTest, LessOrEqualClassTest2)
     EXPECT_LE(l, l2);
 }
 
-TEST_F(LinkedListTest, GreatherOrEqualClassTest)
+TEST_F(ListTest, GreatherOrEqualClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l2 = {{0}, {2}, {3}, {4}, {5}};
@@ -583,7 +583,7 @@ TEST_F(LinkedListTest, GreatherOrEqualClassTest)
     EXPECT_GE(l, l2);
 }
 
-TEST_F(LinkedListTest, GreatherOrEqualClassTest2)
+TEST_F(ListTest, GreatherOrEqualClassTest2)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -591,7 +591,7 @@ TEST_F(LinkedListTest, GreatherOrEqualClassTest2)
     EXPECT_GE(l, l2);
 }
 
-TEST_F(LinkedListTest, PushBackClassTest)
+TEST_F(ListTest, PushBackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -609,7 +609,7 @@ TEST_F(LinkedListTest, PushBackClassTest)
     EXPECT_EQ(l[7], TestClass{23});
 }
 
-TEST_F(LinkedListTest, PushFrontClassTest)
+TEST_F(ListTest, PushFrontClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -627,7 +627,7 @@ TEST_F(LinkedListTest, PushFrontClassTest)
     EXPECT_EQ(l[7], TestClass{5});
 }
 
-TEST_F(LinkedListTest, EmplaceBackClassTest)
+TEST_F(ListTest, EmplaceBackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -645,7 +645,7 @@ TEST_F(LinkedListTest, EmplaceBackClassTest)
     EXPECT_EQ(l[7], TestClass{23});
 }
 
-TEST_F(LinkedListTest, EmplaceFrontClassTest)
+TEST_F(ListTest, EmplaceFrontClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -663,7 +663,7 @@ TEST_F(LinkedListTest, EmplaceFrontClassTest)
     EXPECT_EQ(l[7], TestClass{5});
 }
 
-TEST_F(LinkedListTest, InsertClassTest)
+TEST_F(ListTest, InsertClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -681,7 +681,7 @@ TEST_F(LinkedListTest, InsertClassTest)
     EXPECT_EQ(l[7], TestClass{5});
 }
 
-TEST_F(LinkedListTest, InsertLastClassTest)
+TEST_F(ListTest, InsertLastClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -699,7 +699,7 @@ TEST_F(LinkedListTest, InsertLastClassTest)
     EXPECT_EQ(l[7], TestClass{24});
 }
 
-TEST_F(LinkedListTest, EmplaceClassTest)
+TEST_F(ListTest, EmplaceClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -717,7 +717,7 @@ TEST_F(LinkedListTest, EmplaceClassTest)
     EXPECT_EQ(l[7], TestClass{5});
 }
 
-TEST_F(LinkedListTest, EmplaceLastClassTest)
+TEST_F(ListTest, EmplaceLastClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -735,7 +735,7 @@ TEST_F(LinkedListTest, EmplaceLastClassTest)
     EXPECT_EQ(l[7], TestClass{24});
 }
 
-TEST_F(LinkedListTest, RemoveClassTest)
+TEST_F(ListTest, RemoveClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -750,7 +750,7 @@ TEST_F(LinkedListTest, RemoveClassTest)
     EXPECT_EQ(l[2], l.back());
 }
 
-TEST_F(LinkedListTest, RemoveFailClassTest)
+TEST_F(ListTest, RemoveFailClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -767,7 +767,7 @@ TEST_F(LinkedListTest, RemoveFailClassTest)
         std::out_of_range);
 }
 
-TEST_F(LinkedListTest, PopFrontClassTest)
+TEST_F(ListTest, PopFrontClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -781,7 +781,7 @@ TEST_F(LinkedListTest, PopFrontClassTest)
     EXPECT_EQ(l[2], TestClass{5});
 }
 
-TEST_F(LinkedListTest, PopFrontToEmptyClassTest)
+TEST_F(ListTest, PopFrontToEmptyClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -798,7 +798,7 @@ TEST_F(LinkedListTest, PopFrontToEmptyClassTest)
     EXPECT_TRUE(l.empty());
 }
 
-TEST_F(LinkedListTest, PopFrontFailClassTest)
+TEST_F(ListTest, PopFrontFailClassTest)
 {
     List<TestClass> l;
 
@@ -815,7 +815,7 @@ TEST_F(LinkedListTest, PopFrontFailClassTest)
         std::runtime_error);
 }
 
-TEST_F(LinkedListTest, PopBackClassTest)
+TEST_F(ListTest, PopBackClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -829,7 +829,7 @@ TEST_F(LinkedListTest, PopBackClassTest)
     EXPECT_EQ(l[2], l.back());
 }
 
-TEST_F(LinkedListTest, PopBackToEmptyClassTest)
+TEST_F(ListTest, PopBackToEmptyClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -846,7 +846,7 @@ TEST_F(LinkedListTest, PopBackToEmptyClassTest)
     EXPECT_TRUE(l.empty());
 }
 
-TEST_F(LinkedListTest, PopBackFailClassTest)
+TEST_F(ListTest, PopBackFailClassTest)
 {
     List<TestClass> l;
 
@@ -863,7 +863,7 @@ TEST_F(LinkedListTest, PopBackFailClassTest)
         std::runtime_error);
 }
 
-TEST_F(LinkedListTest, ClearClassTest)
+TEST_F(ListTest, ClearClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -876,7 +876,7 @@ TEST_F(LinkedListTest, ClearClassTest)
     EXPECT_FALSE(l.begin());
 }
 
-TEST_F(LinkedListTest, SizeClassTest)
+TEST_F(ListTest, SizeClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -892,7 +892,7 @@ TEST_F(LinkedListTest, SizeClassTest)
     EXPECT_EQ(l.size(), 4);
 }
 
-TEST_F(LinkedListTest, EmptyClassTest)
+TEST_F(ListTest, EmptyClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -903,7 +903,7 @@ TEST_F(LinkedListTest, EmptyClassTest)
     EXPECT_TRUE(l.empty());
 }
 
-TEST_F(LinkedListTest, SpawnConstructorClassTest)
+TEST_F(ListTest, SpawnConstructorClassTest)
 {
     List<TestClass> l(3, TestClass{1});
 
@@ -914,7 +914,7 @@ TEST_F(LinkedListTest, SpawnConstructorClassTest)
     EXPECT_EQ(l[2], TestClass{1});
 }
 
-TEST_F(LinkedListTest, IteratorConstructorClassTest)
+TEST_F(ListTest, IteratorConstructorClassTest)
 {
     std::vector<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l(v.begin(), v.end());
@@ -928,7 +928,7 @@ TEST_F(LinkedListTest, IteratorConstructorClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(LinkedListTest, CopyConstructorClassTest)
+TEST_F(ListTest, CopyConstructorClassTest)
 {
     List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l(v);
@@ -942,7 +942,7 @@ TEST_F(LinkedListTest, CopyConstructorClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(LinkedListTest, MoveConstructorClassTest)
+TEST_F(ListTest, MoveConstructorClassTest)
 {
     List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l(std::move(v));
@@ -957,7 +957,7 @@ TEST_F(LinkedListTest, MoveConstructorClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(LinkedListTest, InitializerListConstructorClassTest)
+TEST_F(ListTest, InitializerListConstructorClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -970,7 +970,7 @@ TEST_F(LinkedListTest, InitializerListConstructorClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(LinkedListTest, AssignmentClassTest)
+TEST_F(ListTest, AssignmentClassTest)
 {
     List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l;
@@ -985,7 +985,7 @@ TEST_F(LinkedListTest, AssignmentClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(LinkedListTest, MoveAssignmentClassTest)
+TEST_F(ListTest, MoveAssignmentClassTest)
 {
     List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l;
@@ -1001,7 +1001,7 @@ TEST_F(LinkedListTest, MoveAssignmentClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(LinkedListTest, InitializerListAssignmentClassTest)
+TEST_F(ListTest, InitializerListAssignmentClassTest)
 {
     List<TestClass> l;
     l = {{1}, {2}, {3}, {4}, {5}};
@@ -1015,7 +1015,7 @@ TEST_F(LinkedListTest, InitializerListAssignmentClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(LinkedListTest, ConstClassTest)
+TEST_F(ListTest, ConstClassTest)
 {
     const List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -1026,7 +1026,7 @@ TEST_F(LinkedListTest, ConstClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(LinkedListTest, SwapClassTest)
+TEST_F(ListTest, SwapClassTest)
 {
     List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     List<TestClass> l2 = {{11}, {12}, {13}, {14}, {15}};

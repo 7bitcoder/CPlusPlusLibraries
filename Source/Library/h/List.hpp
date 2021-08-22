@@ -53,7 +53,7 @@ public:
     const T &getItem() const { return _item; }
 };
 
-template <typename T>
+template <class T, bool R>
 class ListIterator
 {
 public:
@@ -68,11 +68,11 @@ protected:
 
 public:
     ListIterator(NodePtr ptr = nullptr) { _ptr = ptr; }
-    ListIterator(const ListIterator<T> &rawIterator) = default;
+    ListIterator(const ListIterator<T, R> &rawIterator) = default;
     ~ListIterator() {}
 
-    ListIterator<T> &operator=(const ListIterator<T> &rawIterator) = default;
-    ListIterator<T> &operator=(NodePtr ptr)
+    ListIterator<T, R> &operator=(const ListIterator<T, R> &rawIterator) = default;
+    ListIterator<T, R> &operator=(NodePtr ptr)
     {
         _ptr = ptr;
         return (*this);
@@ -80,92 +80,43 @@ public:
 
     operator bool() const { return _ptr; }
 
-    bool operator==(const ListIterator<T> &rawIterator) const { return _ptr == rawIterator._ptr; }
-    bool operator!=(const ListIterator<T> &rawIterator) const { return _ptr != rawIterator._ptr; }
+    bool operator==(const ListIterator<T, R> &rawIterator) const { return _ptr == rawIterator._ptr; }
+    bool operator!=(const ListIterator<T, R> &rawIterator) const { return _ptr != rawIterator._ptr; }
 
-    ListIterator<T> &operator++()
+    ListIterator<T, R> &operator++()
     {
-        _ptr = _ptr->getNextNode();
+        if constexpr (R)
+        {
+            _ptr = _ptr->getParentNode();
+        }
+        else
+        {
+            _ptr = _ptr->getNextNode();
+        }
         return (*this);
     }
 
-    ListIterator<T> &operator--()
+    ListIterator<T, R> &operator--()
     {
-        _ptr = _ptr->getParentNode();
+        if constexpr (R)
+        {
+            _ptr = _ptr->getNextNode();
+        }
+        else
+        {
+            _ptr = _ptr->getParentNode();
+        }
         return (*this);
     }
 
-    ListIterator<T> operator++(int)
+    ListIterator<T, R> operator++(int)
     {
         auto temp(*this);
         ++*this;
         return temp;
     }
 
-    ListIterator<T> operator--(int)
-    {
-        auto temp(*this);
-        --*this;
-        return temp;
-    }
-
-    T &operator*() { return _ptr->getItem(); }
-    const T &operator*() const { return _ptr->getItem(); }
-
-    T *operator->() { return &_ptr->getItem(); }
-    const T *operator->() const { return &_ptr->getItem(); }
-};
-
-template <typename T>
-class ListReverseIterator
-{
-public:
-    using iterator_category = std::bidirectional_iterator_tag;
-    using value_type = T;
-    using pointer = T *;
-    using reference = T &;
-    using NodePtr = typename std::conditional<std::is_const<T>::value, const Node<typename std::remove_cv<T>::type> *, Node<T> *>::type;
-
-protected:
-    NodePtr _ptr = nullptr;
-
-public:
-    ListReverseIterator(NodePtr ptr = nullptr) { _ptr = ptr; }
-    ListReverseIterator(const ListReverseIterator<T> &rawIterator) = default;
-    ~ListReverseIterator() {}
-
-    ListReverseIterator<T> &operator=(const ListReverseIterator<T> &rawIterator) = default;
-    ListReverseIterator<T> &operator=(NodePtr ptr)
-    {
-        _ptr = ptr;
-        return (*this);
-    }
-
-    operator bool() const { return _ptr; }
-
-    bool operator==(const ListReverseIterator<T> &rawIterator) const { return _ptr == rawIterator._ptr; }
-    bool operator!=(const ListReverseIterator<T> &rawIterator) const { return _ptr != rawIterator._ptr; }
-
-    ListReverseIterator<T> &operator++()
-    {
-        _ptr = _ptr->getParentNode();
-        return (*this);
-    }
-
-    ListReverseIterator<T> &operator--()
-    {
-        _ptr = _ptr->getNextNode();
-        return (*this);
-    }
-
-    ListReverseIterator<T> operator++(int)
-    {
-        auto temp(*this);
-        ++*this;
-        return temp;
-    }
-
-    ListReverseIterator<T> operator--(int)
+    ListIterator<T, R> operator--(int)
     {
         auto temp(*this);
         --*this;
@@ -191,11 +142,11 @@ private:
     size_t _size = 0;
 
 public:
-    using Iterator = ListIterator<T>;
-    using ConstIterator = ListIterator<const T>;
+    using Iterator = ListIterator<T, false>;
+    using ConstIterator = ListIterator<const T, false>;
 
-    using ReverseIterator = ListReverseIterator<T>;
-    using ConstReverseIterator = ListReverseIterator<const T>;
+    using ReverseIterator = ListIterator<T, true>;
+    using ConstReverseIterator = ListIterator<const T, true>;
 
     // Constructors
     List() = default;
@@ -359,7 +310,8 @@ public:
         removeNode(size() - 1);
     }
 
-    void swap(List<T> &other) {
+    void swap(List<T> &other)
+    {
         auto tmp{std::move(*this)};
         *this = std::move(other);
         other = std::move(tmp);

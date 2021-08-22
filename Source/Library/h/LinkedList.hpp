@@ -362,6 +362,18 @@ public:
         removeNode(size() - 1);
     }
 
+    void swap(List<T> &other) {
+        auto tmpHead = _head;
+        auto tmpTail = _tail;
+        auto tmpSize = _size;
+        _head = other._head;
+        _tail = other._tail;
+        _size = other._size;
+        other._head = tmpHead;
+        other._tail = tmpTail;
+        other._size = tmpSize;
+    }
+
     void clear() { removeAllNodes(); }
 
     // Capacity

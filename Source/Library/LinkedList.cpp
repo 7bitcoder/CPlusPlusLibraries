@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <numeric>
+
 #include "LinkedList.hpp"
 
 
@@ -45,6 +48,13 @@ void linkedMain()
     list.emplaceBack(22);
     printAll(list);
 
+    list.emplaceBack(0);
+
+    int sum = std::accumulate(list.begin(), list.end(), 0);
+    list.clear();
+    list.pushBack(sum);
+    printAll(list);
+    
     list.back();
     list.front();
 

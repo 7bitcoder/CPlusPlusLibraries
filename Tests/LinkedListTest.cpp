@@ -1025,3 +1025,25 @@ TEST_F(LinkedListTest, ConstClassTest)
     EXPECT_EQ(l[3], TestClass{4});
     EXPECT_EQ(l[4], TestClass{5});
 }
+
+TEST_F(LinkedListTest, SwapClassTest)
+{
+    List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    List<TestClass> l2 = {{11}, {12}, {13}, {14}, {15}};
+
+    l.swap(l2);
+
+    EXPECT_EQ(l2[0], TestClass{1});
+    EXPECT_EQ(l2[1], TestClass{2});
+    EXPECT_EQ(l2[2], TestClass{3});
+    EXPECT_EQ(l2[3], TestClass{4});
+    EXPECT_EQ(l2[4], TestClass{5});
+    EXPECT_EQ(l2.size(), 5);
+
+    EXPECT_EQ(l[0], TestClass{11});
+    EXPECT_EQ(l[1], TestClass{12});
+    EXPECT_EQ(l[2], TestClass{13});
+    EXPECT_EQ(l[3], TestClass{14});
+    EXPECT_EQ(l[4], TestClass{15});
+    EXPECT_EQ(l.size(), 5);
+}

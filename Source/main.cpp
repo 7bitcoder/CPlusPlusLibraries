@@ -1,6 +1,8 @@
 #include <iostream>
 
-#include "List.hpp"
+#include "LinkedList.hpp"
+
+using namespace sd;
 
 int main(int, char **)
 {

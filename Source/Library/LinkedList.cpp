@@ -8,7 +8,7 @@ namespace sd
     namespace
     {
         template <class T>
-        void printAll(const LinkedList<T> &list)
+        void printAll(const List<T> &list)
         {
             auto size = list.size();
             size_t i = 0;
@@ -28,7 +28,7 @@ namespace sd
     }
     void linkedMain()
     {
-        LinkedList<int> list;
+        List<int> list;
 
         list.pushBack(1);
         list.pushBack(2);

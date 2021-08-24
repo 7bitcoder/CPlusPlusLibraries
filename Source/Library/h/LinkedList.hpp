@@ -5,50 +5,50 @@
 namespace sd
 {
     template <class T>
-    class Node
+    class ListNode
     {
     public:
         using ItemType = T;
-        using NodePtr = Node<T> *;
-        using ConstNodePtr = const Node<T> *;
+        using NodePtr = ListNode<T> *;
+        using ConstNodePtr = const ListNode<T> *;
 
     private:
         T _item;
-        NodePtr _next = nullptr;
-        NodePtr _parent = nullptr;
+        NodePtr _left = nullptr;
+        NodePtr _right = nullptr;
 
     public:
-        Node() = delete;
+        ListNode() = delete;
 
         template <class... Types>
-        Node(Types... args) : _item(args...) {}
-        Node(const T &i) : _item(i) {}
-        Node(T &&i) : _item(i) {}
+        ListNode(Types... args) : _item(args...) {}
+        ListNode(const T &i) : _item(i) {}
+        ListNode(T &&i) : _item(i) {}
 
-        ~Node() = default;
+        ~ListNode() = default;
 
         void setNextNode(NodePtr p)
         {
-            if (_next)
+            if (_left)
             {
-                _next->setParent(nullptr);
+                _left->setParent(nullptr);
             }
-            _next = p;
-            if (_next)
+            _left = p;
+            if (_left)
             {
-                _next->setParent(this);
+                _left->setParent(this);
             }
         }
 
-        NodePtr getNextNode() { return _next; }
+        NodePtr getNextNode() { return _left; }
 
-        ConstNodePtr getNextNode() const { return _next; }
+        ConstNodePtr getNextNode() const { return _left; }
 
-        void setParent(NodePtr parent) { _parent = parent; }
+        void setParent(NodePtr parent) { _right = parent; }
 
-        NodePtr getParentNode() { return _parent; }
+        NodePtr getParentNode() { return _right; }
 
-        ConstNodePtr getParentNode() const { return _parent; }
+        ConstNodePtr getParentNode() const { return _right; }
 
         T &getItem() { return _item; }
 
@@ -63,7 +63,7 @@ namespace sd
         using value_type = T;
         using pointer = T *;
         using reference = T &;
-        using NodePtr = std::conditional_t<std::is_const<T>::value, const Node<std::remove_cv_t<T>> *, Node<T> *>;
+        using NodePtr = std::conditional_t<std::is_const<T>::value, const ListNode<std::remove_cv_t<T>> *, ListNode<T> *>;
 
     protected:
         NodePtr _ptr = nullptr;
@@ -133,11 +133,11 @@ namespace sd
     };
 
     template <class T>
-    class LinkedList
+    class List
     {
     private:
-        using NodePtr = Node<T> *;
-        using ConstNodePtr = const Node<T> *;
+        using NodePtr = ListNode<T> *;
+        using ConstNodePtr = const ListNode<T> *;
 
         NodePtr _head = nullptr;
         NodePtr _tail = nullptr;
@@ -151,9 +151,9 @@ namespace sd
         using ConstReverseIterator = ListIterator<const T, true>;
 
         // Constructors
-        LinkedList() = default;
+        List() = default;
 
-        LinkedList(size_t count, const T &value = T())
+        List(size_t count, const T &value = T())
         {
             for (int i = 0; i < count; ++i)
             {
@@ -162,7 +162,7 @@ namespace sd
         }
 
         template <class InputIt>
-        LinkedList(InputIt first, InputIt last)
+        List(InputIt first, InputIt last)
         {
             for (InputIt it = first; it != last; ++it)
             {
@@ -170,7 +170,7 @@ namespace sd
             }
         }
 
-        LinkedList(const LinkedList<T> &other)
+        List(const List<T> &other)
         {
             auto end = other.end();
             for (auto it = other.begin(); it != end; ++it)
@@ -179,7 +179,7 @@ namespace sd
             }
         }
 
-        LinkedList(LinkedList<T> &&other)
+        List(List<T> &&other)
         {
             _head = other._head;
             _tail = other._tail;
@@ -189,7 +189,7 @@ namespace sd
             other._size = 0;
         }
 
-        LinkedList(std::initializer_list<T> init)
+        List(std::initializer_list<T> init)
         {
             auto end = init.end();
             for (auto it = init.begin(); it != end; ++it)
@@ -198,10 +198,10 @@ namespace sd
             }
         }
 
-        ~LinkedList() { clear(); }
+        ~List() { clear(); }
 
         // Assign
-        LinkedList<T> &operator=(const LinkedList<T> &other)
+        List<T> &operator=(const List<T> &other)
         {
             clear();
             auto end = other.end();
@@ -212,7 +212,7 @@ namespace sd
             return *this;
         }
 
-        LinkedList<T> &operator=(LinkedList<T> &&other)
+        List<T> &operator=(List<T> &&other)
         {
             clear();
             _head = other._head;
@@ -224,7 +224,7 @@ namespace sd
             return *this;
         }
 
-        LinkedList<T> &operator=(std::initializer_list<T> ilist)
+        List<T> &operator=(std::initializer_list<T> ilist)
         {
             clear();
             auto end = ilist.end();
@@ -312,7 +312,7 @@ namespace sd
             removeNode(size() - 1);
         }
 
-        void swap(LinkedList<T> &other)
+        void swap(List<T> &other)
         {
             auto tmp{std::move(*this)};
             *this = std::move(other);
@@ -493,33 +493,33 @@ namespace sd
             }
         }
 
-        NodePtr makeNode(const T &item) { return new Node<T>(item); }
+        NodePtr makeNode(const T &item) { return new ListNode<T>(item); }
 
-        NodePtr makeNode(T &&item) { return new Node<T>(std::move(item)); }
+        NodePtr makeNode(T &&item) { return new ListNode<T>(std::move(item)); }
 
         template <class... Types>
-        NodePtr makeNodeWithItem(Types... args) { return new Node<T>(args...); }
+        NodePtr makeNodeWithItem(Types... args) { return new ListNode<T>(args...); }
 
         void deleteNode(NodePtr ptr) { delete ptr; }
     };
 
     template <class T>
-    bool operator==(const LinkedList<T> &lhs, const LinkedList<T> &rhs) { return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
+    bool operator==(const List<T> &lhs, const List<T> &rhs) { return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
 
     template <class T>
-    bool operator!=(const LinkedList<T> &lhs, const LinkedList<T> &rhs) { return !(lhs == rhs); }
+    bool operator!=(const List<T> &lhs, const List<T> &rhs) { return !(lhs == rhs); }
 
     template <class T>
-    bool operator<(const LinkedList<T> &lhs, const LinkedList<T> &rhs) { return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
+    bool operator<(const List<T> &lhs, const List<T> &rhs) { return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
 
     template <class T>
-    bool operator<=(const LinkedList<T> &lhs, const LinkedList<T> &rhs) { return lhs < rhs || lhs == rhs; }
+    bool operator<=(const List<T> &lhs, const List<T> &rhs) { return lhs < rhs || lhs == rhs; }
 
     template <class T>
-    bool operator>(const LinkedList<T> &lhs, const LinkedList<T> &rhs) { return std::lexicographical_compare(rhs.begin(), rhs.end(), lhs.begin(), lhs.end()); }
+    bool operator>(const List<T> &lhs, const List<T> &rhs) { return std::lexicographical_compare(rhs.begin(), rhs.end(), lhs.begin(), lhs.end()); }
 
     template <class T>
-    bool operator>=(const LinkedList<T> &lhs, const LinkedList<T> &rhs) { return lhs > rhs || lhs == rhs; }
+    bool operator>=(const List<T> &lhs, const List<T> &rhs) { return lhs > rhs || lhs == rhs; }
 
     void linkedMain();
 

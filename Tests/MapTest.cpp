@@ -2,9 +2,11 @@
 #include <thread>
 #include <gtest/gtest.h>
 
+#include "Map.hpp"
 #include "LinkedList.hpp"
 
-namespace {
+namespace
+{
     struct TestClass
     {
         int field;
@@ -19,102 +21,102 @@ namespace {
     bool operator>=(const TestClass &cl1, const TestClass &cl2) { return cl1.field >= cl2.field; }
 }
 
-class ListTest : public ::testing::Test
+class MapTest : public ::testing::Test
 {
 protected:
     static void SetUpTestSuite() {}
 
-    ListTest() {}
+    MapTest() {}
 
     void SetUp() override {}
 
     void TearDown() override {}
 
-    ~ListTest() {}
+    ~MapTest() {}
 
     static void TearDownTestSuite() {}
 };
 
-TEST_F(ListTest, AtTest)
+TEST_F(MapTest, AtTest)
 {
-    sd::List<int> l = {1, 2, 3, 4, 5};
+    sd::Map<int, std::string> l = {{1, "hey"}, {2, "may"}, {3, "bay"}, {4, "yay"}, {5, "tej"}};
 
-    EXPECT_EQ(l.at(0), 1);
-    EXPECT_EQ(l.at(1), 2);
-    EXPECT_EQ(l.at(2), 3);
-    EXPECT_EQ(l.at(3), 4);
-    EXPECT_EQ(l.at(4), 5);
+    EXPECT_EQ(l.at(1), "hey");
+    EXPECT_EQ(l.at(2), "may");
+    EXPECT_EQ(l.at(3), "bay");
+    EXPECT_EQ(l.at(4), "yay");
+    EXPECT_EQ(l.at(5), "tej");
 
-    EXPECT_THROW(l.at(-2), std::out_of_range);
+    EXPECT_THROW(l.at(-2), std::runtime_error);
     EXPECT_THROW(
         try
         {
             l.at(22);
-        } catch (const std::out_of_range &e)
+        } catch (const std::runtime_error &e)
         {
             // and this tests that it has the correct message
-            EXPECT_STREQ("Index: 22 exceeded allowed boundaries, current list size is: 5", e.what());
+            EXPECT_STREQ("Value not found", e.what());
             throw;
         },
-        std::out_of_range);
+        std::runtime_error);
 }
 
-TEST_F(ListTest, AtOperatorTest)
+TEST_F(MapTest, AtOperatorTest)
 {
-    sd::List<int> l = {1, 2, 3, 4, 5};
+    sd::Map<int, std::string> l = {{1, "hey"}, {2, "may"}, {3, "bay"}, {4, "yay"}, {5, "tej"}};
 
-    EXPECT_EQ(l[0], 1);
-    EXPECT_EQ(l[1], 2);
-    EXPECT_EQ(l[2], 3);
-    EXPECT_EQ(l[3], 4);
-    EXPECT_EQ(l[4], 5);
+    EXPECT_EQ(l[1], "hey");
+    EXPECT_EQ(l[2], "may");
+    EXPECT_EQ(l[3], "bay");
+    EXPECT_EQ(l[4], "yay");
+    EXPECT_EQ(l[5], "tej");
 
-    EXPECT_THROW(l[-2], std::out_of_range);
+    EXPECT_THROW(l[-2], std::runtime_error);
     EXPECT_THROW(
         try
         {
             l[22];
-        } catch (const std::out_of_range &e)
+        } catch (const std::runtime_error &e)
         {
             // and this tests that it has the correct message
-            EXPECT_STREQ("Index: 22 exceeded allowed boundaries, current list size is: 5", e.what());
+            EXPECT_STREQ("Value not found", e.what());
             throw;
         },
-        std::out_of_range);
+        std::runtime_error);
 }
 
-TEST_F(ListTest, AtOperatorClassTest)
+TEST_F(MapTest, AtOperatorClassTest)
 {
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    sd::Map<std::string, TestClass> l = {{"hey", {1}}, {"may", {2}}, {"bay", {3}}, {"yay", {4}}, {"tej", {5}}};
 
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{2});
-    EXPECT_EQ(l[2], TestClass{3});
-    EXPECT_EQ(l[3], TestClass{4});
-    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l["hey"], TestClass{1});
+    EXPECT_EQ(l["may"], TestClass{2});
+    EXPECT_EQ(l["bay"], TestClass{3});
+    EXPECT_EQ(l["yay"], TestClass{4});
+    EXPECT_EQ(l["tej"], TestClass{5});
 
-    EXPECT_THROW(l[-2], std::out_of_range);
+    EXPECT_THROW(l["fej"], std::runtime_error);
     EXPECT_THROW(
         try
         {
-            l[22];
-        } catch (const std::out_of_range &e)
+            l["gej"];
+        } catch (const std::runtime_error &e)
         {
             // and this tests that it has the correct message
-            EXPECT_STREQ("Index: 22 exceeded allowed boundaries, current list size is: 5", e.what());
+            EXPECT_STREQ("Value not found", e.what());
             throw;
         },
-        std::out_of_range);
+        std::runtime_error);
 }
 
-TEST_F(ListTest, FrontClassTest)
+TEST_F(MapTest, FrontClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
     EXPECT_EQ(l.front(), TestClass{1});
 }
 
-TEST_F(ListTest, FrontClassFailTest)
+TEST_F(MapTest, FrontClassFailTest)
 {
     sd::List<TestClass> l;
 
@@ -130,14 +132,14 @@ TEST_F(ListTest, FrontClassFailTest)
         std::runtime_error);
 }
 
-TEST_F(ListTest, BackClassTest)
+TEST_F(MapTest, BackClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
     EXPECT_EQ(l.back(), TestClass{5});
 }
 
-TEST_F(ListTest, BackClassFailTest)
+TEST_F(MapTest, BackClassFailTest)
 {
     sd::List<TestClass> l;
 
@@ -153,7 +155,7 @@ TEST_F(ListTest, BackClassFailTest)
         std::runtime_error);
 }
 
-TEST_F(ListTest, IteratorClassTest)
+TEST_F(MapTest, IteratorClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -166,7 +168,7 @@ TEST_F(ListTest, IteratorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(ListTest, IteratorBackClassTest)
+TEST_F(MapTest, IteratorBackClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -182,7 +184,7 @@ TEST_F(ListTest, IteratorBackClassTest)
     EXPECT_FALSE(++(++it));
 }
 
-TEST_F(ListTest, IteratorCompareTest)
+TEST_F(MapTest, IteratorCompareTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -193,7 +195,7 @@ TEST_F(ListTest, IteratorCompareTest)
     EXPECT_EQ(l.end(), l.end());
 }
 
-TEST_F(ListTest, IteratorPostIncrementClassTest)
+TEST_F(MapTest, IteratorPostIncrementClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -207,7 +209,7 @@ TEST_F(ListTest, IteratorPostIncrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(ListTest, IteratorPostDecrementClassTest)
+TEST_F(MapTest, IteratorPostDecrementClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -226,7 +228,7 @@ TEST_F(ListTest, IteratorPostDecrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(ListTest, IteratorAccesorClassTest)
+TEST_F(MapTest, IteratorAccesorClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -239,7 +241,7 @@ TEST_F(ListTest, IteratorAccesorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(ListTest, ReverseIteratorClassTest)
+TEST_F(MapTest, ReverseIteratorClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -252,7 +254,7 @@ TEST_F(ListTest, ReverseIteratorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(ListTest, ReverseIteratorBackClassTest)
+TEST_F(MapTest, ReverseIteratorBackClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -268,7 +270,7 @@ TEST_F(ListTest, ReverseIteratorBackClassTest)
     EXPECT_FALSE(++(++it));
 }
 
-TEST_F(ListTest, ReverseIteratorCompareTest)
+TEST_F(MapTest, ReverseIteratorCompareTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -279,7 +281,7 @@ TEST_F(ListTest, ReverseIteratorCompareTest)
     EXPECT_EQ(l.rEnd(), l.rEnd());
 }
 
-TEST_F(ListTest, ReverseIteratorPostIncrementClassTest)
+TEST_F(MapTest, ReverseIteratorPostIncrementClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -293,7 +295,7 @@ TEST_F(ListTest, ReverseIteratorPostIncrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(ListTest, ReverseIteratorPostDecrementClassTest)
+TEST_F(MapTest, ReverseIteratorPostDecrementClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -312,7 +314,7 @@ TEST_F(ListTest, ReverseIteratorPostDecrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(ListTest, ReverseIteratorAccesorClassTest)
+TEST_F(MapTest, ReverseIteratorAccesorClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -325,7 +327,7 @@ TEST_F(ListTest, ReverseIteratorAccesorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(ListTest, ConstIteratorClassTest)
+TEST_F(MapTest, ConstIteratorClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -338,7 +340,7 @@ TEST_F(ListTest, ConstIteratorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(ListTest, ConstIteratorBackClassTest)
+TEST_F(MapTest, ConstIteratorBackClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -354,7 +356,7 @@ TEST_F(ListTest, ConstIteratorBackClassTest)
     EXPECT_FALSE(++(++it));
 }
 
-TEST_F(ListTest, ConstIteratorCompareTest)
+TEST_F(MapTest, ConstIteratorCompareTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -365,7 +367,7 @@ TEST_F(ListTest, ConstIteratorCompareTest)
     EXPECT_EQ(l.cEnd(), l.cEnd());
 }
 
-TEST_F(ListTest, ConstIteratorPostIncrementClassTest)
+TEST_F(MapTest, ConstIteratorPostIncrementClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -379,7 +381,7 @@ TEST_F(ListTest, ConstIteratorPostIncrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(ListTest, ConstIteratorPostDecrementClassTest)
+TEST_F(MapTest, ConstIteratorPostDecrementClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -398,7 +400,7 @@ TEST_F(ListTest, ConstIteratorPostDecrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(ListTest, ConstIteratorAccesorClassTest)
+TEST_F(MapTest, ConstIteratorAccesorClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -411,7 +413,7 @@ TEST_F(ListTest, ConstIteratorAccesorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(ListTest, ConstReverseIteratorClassTest)
+TEST_F(MapTest, ConstReverseIteratorClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -424,7 +426,7 @@ TEST_F(ListTest, ConstReverseIteratorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(ListTest, ConstReverseIteratorBackClassTest)
+TEST_F(MapTest, ConstReverseIteratorBackClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -440,7 +442,7 @@ TEST_F(ListTest, ConstReverseIteratorBackClassTest)
     EXPECT_FALSE(++(++it));
 }
 
-TEST_F(ListTest, ConstReverseIteratorCompareTest)
+TEST_F(MapTest, ConstReverseIteratorCompareTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -451,7 +453,7 @@ TEST_F(ListTest, ConstReverseIteratorCompareTest)
     EXPECT_EQ(l.crEnd(), l.crEnd());
 }
 
-TEST_F(ListTest, ConstReverseIteratorPostIncrementClassTest)
+TEST_F(MapTest, ConstReverseIteratorPostIncrementClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -465,7 +467,7 @@ TEST_F(ListTest, ConstReverseIteratorPostIncrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(ListTest, ConstReverseIteratorPostDecrementClassTest)
+TEST_F(MapTest, ConstReverseIteratorPostDecrementClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -484,7 +486,7 @@ TEST_F(ListTest, ConstReverseIteratorPostDecrementClassTest)
     EXPECT_FALSE(it);
 }
 
-TEST_F(ListTest, ConstReverseIteratorAccesorClassTest)
+TEST_F(MapTest, ConstReverseIteratorAccesorClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -497,7 +499,7 @@ TEST_F(ListTest, ConstReverseIteratorAccesorClassTest)
     EXPECT_FALSE(++it);
 }
 
-TEST_F(ListTest, EqualsClassTest)
+TEST_F(MapTest, EqualsClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -505,7 +507,7 @@ TEST_F(ListTest, EqualsClassTest)
     EXPECT_EQ(l, l2);
 }
 
-TEST_F(ListTest, EqualsClassTest2)
+TEST_F(MapTest, EqualsClassTest2)
 {
     sd::List<TestClass> l;
     sd::List<TestClass> l2;
@@ -513,7 +515,7 @@ TEST_F(ListTest, EqualsClassTest2)
     EXPECT_EQ(l, l2);
 }
 
-TEST_F(ListTest, NotEqualsClassTest)
+TEST_F(MapTest, NotEqualsClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l2 = {{11}, {2}, {3}, {4}, {5}};
@@ -521,7 +523,7 @@ TEST_F(ListTest, NotEqualsClassTest)
     EXPECT_NE(l, l2);
 }
 
-TEST_F(ListTest, NotEqualsClassTest2)
+TEST_F(MapTest, NotEqualsClassTest2)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}, {0}};
     sd::List<TestClass> l2 = {{11}, {2}, {3}, {4}, {5}};
@@ -529,7 +531,7 @@ TEST_F(ListTest, NotEqualsClassTest2)
     EXPECT_NE(l, l2);
 }
 
-TEST_F(ListTest, LessClassTest)
+TEST_F(MapTest, LessClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l2 = {{1}, {2}, {3}, {4}, {6}};
@@ -537,7 +539,7 @@ TEST_F(ListTest, LessClassTest)
     EXPECT_LT(l, l2);
 }
 
-TEST_F(ListTest, LessClassTest2)
+TEST_F(MapTest, LessClassTest2)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}, {6}};
@@ -545,7 +547,7 @@ TEST_F(ListTest, LessClassTest2)
     EXPECT_LT(l, l2);
 }
 
-TEST_F(ListTest, GreatherClassTest)
+TEST_F(MapTest, GreatherClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {6}};
     sd::List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -553,7 +555,7 @@ TEST_F(ListTest, GreatherClassTest)
     EXPECT_GT(l, l2);
 }
 
-TEST_F(ListTest, GreatherClassTest2)
+TEST_F(MapTest, GreatherClassTest2)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}, {6}};
     sd::List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -561,7 +563,7 @@ TEST_F(ListTest, GreatherClassTest2)
     EXPECT_GT(l, l2);
 }
 
-TEST_F(ListTest, LessOrEqualClassTest)
+TEST_F(MapTest, LessOrEqualClassTest)
 {
     sd::List<TestClass> l = {{0}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -569,7 +571,7 @@ TEST_F(ListTest, LessOrEqualClassTest)
     EXPECT_LE(l, l2);
 }
 
-TEST_F(ListTest, LessOrEqualClassTest2)
+TEST_F(MapTest, LessOrEqualClassTest2)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -577,7 +579,7 @@ TEST_F(ListTest, LessOrEqualClassTest2)
     EXPECT_LE(l, l2);
 }
 
-TEST_F(ListTest, GreatherOrEqualClassTest)
+TEST_F(MapTest, GreatherOrEqualClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l2 = {{0}, {2}, {3}, {4}, {5}};
@@ -585,7 +587,7 @@ TEST_F(ListTest, GreatherOrEqualClassTest)
     EXPECT_GE(l, l2);
 }
 
-TEST_F(ListTest, GreatherOrEqualClassTest2)
+TEST_F(MapTest, GreatherOrEqualClassTest2)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l2 = {{1}, {2}, {3}, {4}, {5}};
@@ -593,7 +595,7 @@ TEST_F(ListTest, GreatherOrEqualClassTest2)
     EXPECT_GE(l, l2);
 }
 
-TEST_F(ListTest, PushBackClassTest)
+TEST_F(MapTest, PushBackClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -611,7 +613,7 @@ TEST_F(ListTest, PushBackClassTest)
     EXPECT_EQ(l[7], TestClass{23});
 }
 
-TEST_F(ListTest, PushFrontClassTest)
+TEST_F(MapTest, PushFrontClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -629,7 +631,7 @@ TEST_F(ListTest, PushFrontClassTest)
     EXPECT_EQ(l[7], TestClass{5});
 }
 
-TEST_F(ListTest, EmplaceBackClassTest)
+TEST_F(MapTest, EmplaceBackClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -647,7 +649,7 @@ TEST_F(ListTest, EmplaceBackClassTest)
     EXPECT_EQ(l[7], TestClass{23});
 }
 
-TEST_F(ListTest, EmplaceFrontClassTest)
+TEST_F(MapTest, EmplaceFrontClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -665,7 +667,7 @@ TEST_F(ListTest, EmplaceFrontClassTest)
     EXPECT_EQ(l[7], TestClass{5});
 }
 
-TEST_F(ListTest, InsertClassTest)
+TEST_F(MapTest, InsertClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -683,7 +685,7 @@ TEST_F(ListTest, InsertClassTest)
     EXPECT_EQ(l[7], TestClass{5});
 }
 
-TEST_F(ListTest, InsertLastClassTest)
+TEST_F(MapTest, InsertLastClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -701,7 +703,7 @@ TEST_F(ListTest, InsertLastClassTest)
     EXPECT_EQ(l[7], TestClass{24});
 }
 
-TEST_F(ListTest, EmplaceClassTest)
+TEST_F(MapTest, EmplaceClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -719,7 +721,7 @@ TEST_F(ListTest, EmplaceClassTest)
     EXPECT_EQ(l[7], TestClass{5});
 }
 
-TEST_F(ListTest, EmplaceLastClassTest)
+TEST_F(MapTest, EmplaceLastClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -737,7 +739,7 @@ TEST_F(ListTest, EmplaceLastClassTest)
     EXPECT_EQ(l[7], TestClass{24});
 }
 
-TEST_F(ListTest, RemoveClassTest)
+TEST_F(MapTest, RemoveClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -752,7 +754,7 @@ TEST_F(ListTest, RemoveClassTest)
     EXPECT_EQ(l[2], l.back());
 }
 
-TEST_F(ListTest, RemoveFailClassTest)
+TEST_F(MapTest, RemoveFailClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -769,7 +771,7 @@ TEST_F(ListTest, RemoveFailClassTest)
         std::out_of_range);
 }
 
-TEST_F(ListTest, PopFrontClassTest)
+TEST_F(MapTest, PopFrontClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -783,7 +785,7 @@ TEST_F(ListTest, PopFrontClassTest)
     EXPECT_EQ(l[2], TestClass{5});
 }
 
-TEST_F(ListTest, PopFrontToEmptyClassTest)
+TEST_F(MapTest, PopFrontToEmptyClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -800,7 +802,7 @@ TEST_F(ListTest, PopFrontToEmptyClassTest)
     EXPECT_TRUE(l.empty());
 }
 
-TEST_F(ListTest, PopFrontFailClassTest)
+TEST_F(MapTest, PopFrontFailClassTest)
 {
     sd::List<TestClass> l;
 
@@ -817,7 +819,7 @@ TEST_F(ListTest, PopFrontFailClassTest)
         std::runtime_error);
 }
 
-TEST_F(ListTest, PopBackClassTest)
+TEST_F(MapTest, PopBackClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -831,7 +833,7 @@ TEST_F(ListTest, PopBackClassTest)
     EXPECT_EQ(l[2], l.back());
 }
 
-TEST_F(ListTest, PopBackToEmptyClassTest)
+TEST_F(MapTest, PopBackToEmptyClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -848,7 +850,7 @@ TEST_F(ListTest, PopBackToEmptyClassTest)
     EXPECT_TRUE(l.empty());
 }
 
-TEST_F(ListTest, PopBackFailClassTest)
+TEST_F(MapTest, PopBackFailClassTest)
 {
     sd::List<TestClass> l;
 
@@ -865,7 +867,7 @@ TEST_F(ListTest, PopBackFailClassTest)
         std::runtime_error);
 }
 
-TEST_F(ListTest, ClearClassTest)
+TEST_F(MapTest, ClearClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -878,7 +880,7 @@ TEST_F(ListTest, ClearClassTest)
     EXPECT_FALSE(l.begin());
 }
 
-TEST_F(ListTest, SizeClassTest)
+TEST_F(MapTest, SizeClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -894,7 +896,7 @@ TEST_F(ListTest, SizeClassTest)
     EXPECT_EQ(l.size(), 4);
 }
 
-TEST_F(ListTest, EmptyClassTest)
+TEST_F(MapTest, EmptyClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -905,7 +907,7 @@ TEST_F(ListTest, EmptyClassTest)
     EXPECT_TRUE(l.empty());
 }
 
-TEST_F(ListTest, SpawnConstructorClassTest)
+TEST_F(MapTest, SpawnConstructorClassTest)
 {
     sd::List<TestClass> l(3, TestClass{1});
 
@@ -916,7 +918,7 @@ TEST_F(ListTest, SpawnConstructorClassTest)
     EXPECT_EQ(l[2], TestClass{1});
 }
 
-TEST_F(ListTest, IteratorConstructorClassTest)
+TEST_F(MapTest, IteratorConstructorClassTest)
 {
     std::vector<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l(v.begin(), v.end());
@@ -930,7 +932,7 @@ TEST_F(ListTest, IteratorConstructorClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(ListTest, CopyConstructorClassTest)
+TEST_F(MapTest, CopyConstructorClassTest)
 {
     sd::List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l(v);
@@ -944,7 +946,7 @@ TEST_F(ListTest, CopyConstructorClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(ListTest, MoveConstructorClassTest)
+TEST_F(MapTest, MoveConstructorClassTest)
 {
     sd::List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l(std::move(v));
@@ -959,7 +961,7 @@ TEST_F(ListTest, MoveConstructorClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(ListTest, InitializerListConstructorClassTest)
+TEST_F(MapTest, InitializerListConstructorClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -972,7 +974,7 @@ TEST_F(ListTest, InitializerListConstructorClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(ListTest, AssignmentClassTest)
+TEST_F(MapTest, AssignmentClassTest)
 {
     sd::List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l;
@@ -987,7 +989,7 @@ TEST_F(ListTest, AssignmentClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(ListTest, MoveAssignmentClassTest)
+TEST_F(MapTest, MoveAssignmentClassTest)
 {
     sd::List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l;
@@ -1003,7 +1005,7 @@ TEST_F(ListTest, MoveAssignmentClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(ListTest, InitializerListAssignmentClassTest)
+TEST_F(MapTest, InitializerListAssignmentClassTest)
 {
     sd::List<TestClass> l;
     l = {{1}, {2}, {3}, {4}, {5}};
@@ -1017,7 +1019,7 @@ TEST_F(ListTest, InitializerListAssignmentClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(ListTest, ConstClassTest)
+TEST_F(MapTest, ConstClassTest)
 {
     const sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
 
@@ -1028,7 +1030,7 @@ TEST_F(ListTest, ConstClassTest)
     EXPECT_EQ(l[4], TestClass{5});
 }
 
-TEST_F(ListTest, SwapClassTest)
+TEST_F(MapTest, SwapClassTest)
 {
     sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
     sd::List<TestClass> l2 = {{11}, {12}, {13}, {14}, {15}};

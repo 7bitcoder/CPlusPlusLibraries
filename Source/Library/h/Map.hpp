@@ -67,9 +67,9 @@ namespace sd
 
         const T &getItem() const { return _keyItem.second; }
 
-        std::pair<const K, T> &getPair(const K &key, bool &found) { return _keyItem; }
+        std::pair<const K, T> &getPair() { return _keyItem; }
 
-        const std::pair<const K, T> &getPair(const K &key, bool &found) const { return _keyItem; }
+        const std::pair<const K, T> &getPair() const { return _keyItem; }
 
         Color getColor() const { return _color; }
 
@@ -79,7 +79,7 @@ namespace sd
     template <class K, class T>
     class Map;
 
-    template <class K, class T, bool R> // R = Reverse
+    template <class K, class T, bool C, bool R> // C= const, R = Reverse
     class MapIterator
     {
     public:
@@ -87,42 +87,31 @@ namespace sd
         using value_type = T;
         using pointer = T *;
         using reference = T &;
-        using MapNodePtr = std::conditional_t<std::is_const<T>::value, const MapNode<K, std::remove_cv_t<T>> *, MapNode<K, T> *>;
+        using MapNode = std::conditional_t<C, const MapNode<K, T>, MapNode<K, T>>;
+        using MapNodePtr = MapNode *;
+        using Pair = std::conditional_t<C, const std::pair<const K, T>, std::pair<const K, T>>;
+        using PairRef = Pair &;
+        using PairPtr = Pair *;
 
     protected:
         MapNodePtr _ptr = nullptr;
-        Map<K, T> *_parentMap;
+        const Map<K, T> *const _parentMap;
 
     public:
-        MapIterator() = delete;
-        MapIterator(Map<K, T> *parentMap, MapNodePtr ptr) : _parentMap(parentMap) { _ptr = ptr; }
-        MapIterator(const MapIterator<K, T, R> &rawIterator) = default;
+        MapIterator(const Map<K, T> *const parentMap, MapNodePtr ptr) : _parentMap(parentMap) { _ptr = ptr; }
+        MapIterator(const MapIterator<K, T, C, R> &rawIterator) = default;
         ~MapIterator() = default;
 
-        MapIterator<K, T, R> &operator=(const MapIterator<K, T, R> &rawIterator) = default;
+        MapIterator<K, T, C, R> &operator=(const MapIterator<K, T, C, R> &rawIterator) = default;
 
         operator bool() const { return !_parentMap->isGuard(_ptr); }
 
-        bool operator==(const MapIterator<K, T, R> &rawIterator) const { return _ptr == rawIterator._ptr; }
-        bool operator!=(const MapIterator<K, T, R> &rawIterator) const { return _ptr != rawIterator._ptr; }
+        bool operator==(const MapIterator<K, T, C, R> &rawIterator) const { return _ptr == rawIterator._ptr; }
+        bool operator!=(const MapIterator<K, T, C, R> &rawIterator) const { return _ptr != rawIterator._ptr; }
 
-        MapIterator<K, T, R> &operator++()
+        MapIterator<K, T, C, R> &operator++()
         {
 
-            if constexpr (R)
-            {
-                next();
-            }
-            else
-            {
-                previous();
-            }
-
-            return (*this);
-        }
-
-        MapIterator<K, T, R> &operator--()
-        {
             if constexpr (R)
             {
                 previous();
@@ -131,28 +120,42 @@ namespace sd
             {
                 next();
             }
+
             return (*this);
         }
 
-        MapIterator<K, T, R> operator++(int)
+        MapIterator<K, T, C, R> &operator--()
+        {
+            if constexpr (R)
+            {
+                next();
+            }
+            else
+            {
+                previous();
+            }
+            return (*this);
+        }
+
+        MapIterator<K, T, C, R> operator++(int)
         {
             auto temp(*this);
             ++*this;
             return temp;
         }
 
-        MapIterator<K, T, R> operator--(int)
+        MapIterator<K, T, C, R> operator--(int)
         {
             auto temp(*this);
             --*this;
             return temp;
         }
 
-        T &operator*() { return _ptr->getItem(); }
-        const T &operator*() const { return _ptr->getItem(); }
+        PairRef operator*() { return _ptr->getPair(); }
+        PairRef operator*() const { return _ptr->getPair(); }
 
-        T *operator->() { return &_ptr->getItem(); }
-        const T *operator->() const { return &_ptr->getItem(); }
+        PairPtr operator->() { return &_ptr->getPair(); }
+        PairPtr operator->() const { return &_ptr->getPair(); }
 
     private:
         void next()
@@ -187,15 +190,47 @@ namespace sd
             }
         }
 
-        void previous() {}
+        void previous()
+        {
+            if (!_parentMap->isGuard(_ptr->getLeft()))
+            {
+                _ptr = _ptr->getLeft();
+                while (!_parentMap->isGuard(_ptr->getRight()))
+                {
+                    _ptr = _ptr->getRight();
+                }
+            }
+            else
+            {
+                auto y = _ptr->getParent();
+                if (_parentMap->isGuard(y))
+                {
+                    _ptr = y;
+                }
+                else
+                {
+                    while (_ptr == y->getLeft())
+                    {
+                        _ptr = y;
+                        y = y->getParent();
+                    }
+                    if (_ptr->getLeft() != y)
+                    {
+                        _ptr = y;
+                    }
+                }
+            }
+        }
     };
 
     template <class K, class T>
     class Map
     {
     private:
-        friend class MapIterator<K, T, false>;
-        friend class MapIterator<K, T, true>;
+        friend class MapIterator<K, T, false, false>;
+        friend class MapIterator<K, T, true, false>;
+        friend class MapIterator<K, T, false, true>;
+        friend class MapIterator<K, T, true, true>;
 
         using MapNodePtr = MapNode<K, T> *;
         using ConstMapNodePtr = const MapNode<K, T> *;
@@ -208,11 +243,11 @@ namespace sd
         size_t _size = 0;
 
     public:
-        using Iterator = MapIterator<K, T, false>;
-        using ConstIterator = MapIterator<K, const T, false>;
+        using Iterator = MapIterator<K, T, false, false>;
+        using ConstIterator = MapIterator<K, T, true, false>;
 
-        using ReverseIterator = MapIterator<K, T, true>;
-        using ConstReverseIterator = MapIterator<K, const T, true>;
+        using ReverseIterator = MapIterator<K, T, false, true>;
+        using ConstReverseIterator = MapIterator<K, T, true, true>;
 
         // Constructors
         Map() = default;
@@ -286,7 +321,6 @@ namespace sd
         const T &operator[](const K &key) const { return at(key); }
 
         // Modifiers
-
         std::pair<Iterator, bool> insert(const Pair &value) { return insertNode(makeNode(value)); }
         std::pair<Iterator, bool> insert(Pair &&value) { return insertNode(makeNode(value)); }
 
@@ -299,7 +333,7 @@ namespace sd
             }
         }
 
-        void insert(std::initializer_list<Pair> ilist)
+        void insert(const std::initializer_list<Pair>& ilist)
         {
             auto end = ilist.end();
             for (auto it = ilist.begin(); it != end; ++it)
@@ -348,20 +382,20 @@ namespace sd
         Iterator begin() { return Iterator{this, minimum(_root)}; }
         Iterator end() { return Iterator{this, _guardPtr}; }
 
-        ConstIterator begin() const { return ConstIterator{this, minimum(_root)}; }
-        ConstIterator end() const { return ConstIterator{this, _guardPtr}; }
+        ConstIterator begin() const { return ConstIterator{this, const_cast<MapNodePtr>(minimum(_root))}; }
+        ConstIterator end() const { return ConstIterator{this, const_cast<MapNodePtr>(_guardPtr)}; }
 
-        ConstIterator cBegin() const { return ConstIterator{this, minimum(_root)}; }
-        ConstIterator cEnd() const { return ConstIterator{this, _guardPtr}; }
+        ConstIterator cBegin() const { return ConstIterator{this, minimum(const_cast<MapNodePtr>(_root))}; }
+        ConstIterator cEnd() const { return ConstIterator{this, const_cast<MapNodePtr>(_guardPtr)}; }
 
-        ReverseIterator rBegin() { return ReverseIterator{this, _guardPtr}; }
+        ReverseIterator rBegin() { return ReverseIterator{this, maximum(_root)}; }
         ReverseIterator rEnd() { return ReverseIterator{this, _guardPtr}; }
 
-        ConstReverseIterator rBegin() const { return ConstReverseIterator{this, _guardPtr}; }
-        ConstReverseIterator rEnd() const { return ConstReverseIterator{this, _guardPtr}; }
+        ConstReverseIterator rBegin() const { return ConstReverseIterator{this, const_cast<MapNodePtr>(maximum(_root))}; }
+        ConstReverseIterator rEnd() const { return ConstReverseIterator{this, const_cast<MapNodePtr>(_guardPtr)}; }
 
-        ConstReverseIterator crBegin() const { return ConstReverseIterator{this, _guardPtr}; }
-        ConstReverseIterator crEnd() const { return ConstReverseIterator{this, _guardPtr}; }
+        ConstReverseIterator crBegin() const { return ConstReverseIterator{this, const_cast<MapNodePtr>(maximum(_root))}; }
+        ConstReverseIterator crEnd() const { return ConstReverseIterator{this, const_cast<MapNodePtr>(_guardPtr)}; }
 
     private:
         const T &getConstItem(const K &key) const
@@ -396,13 +430,25 @@ namespace sd
             return _guardPtr;
         }
 
-        MapNodePtr minimum(MapNodePtr ptr)
+        MapNodePtr minimum(MapNodePtr ptr) const
         {
             if (!isGuard(ptr))
             {
                 while (!isGuard(ptr->getLeft()))
                 {
                     ptr = ptr->getLeft();
+                }
+            }
+            return ptr;
+        }
+
+        MapNodePtr maximum(MapNodePtr ptr) const
+        {
+            if (!isGuard(ptr))
+            {
+                while (!isGuard(ptr->getRight()))
+                {
+                    ptr = ptr->getRight();
                 }
             }
             return ptr;
@@ -770,7 +816,7 @@ namespace sd
             }
         }
 
-        bool isGuard(ConstMapNodePtr ptr) const { return ptr == _guardPtr; }
+        bool isGuard(ConstMapNodePtr const ptr) const { return ptr == _guardPtr; }
 
         MapNodePtr makeNode(const K &key, const T &item) { return new MapNode<K, T>(key, item); }
 
@@ -786,23 +832,23 @@ namespace sd
         void deleteNode(MapNodePtr ptr) { delete ptr; }
     };
 
-    /*template <class T>
+    template <class K, class T>
     bool operator==(const Map<K, T> &lhs, const Map<K, T> &rhs) { return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
-    
-    template <class T>
+
+    template <class K, class T>
     bool operator!=(const Map<K, T> &lhs, const Map<K, T> &rhs) { return !(lhs == rhs); }
-    
-    template <class T>
+
+    template <class K, class T>
     bool operator<(const Map<K, T> &lhs, const Map<K, T> &rhs) { return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
-    
-    template <class T>
+
+    template <class K, class T>
     bool operator<=(const Map<K, T> &lhs, const Map<K, T> &rhs) { return lhs < rhs || lhs == rhs; }
-    
-    template <class T>
+
+    template <class K, class T>
     bool operator>(const Map<K, T> &lhs, const Map<K, T> &rhs) { return std::lexicographical_compare(rhs.begin(), rhs.end(), lhs.begin(), lhs.end()); }
-    
-    template <class T>
+
+    template <class K, class T>
     bool operator>=(const Map<K, T> &lhs, const Map<K, T> &rhs) { return lhs > rhs || lhs == rhs; }
-    */
+
     void mapMain();
 }

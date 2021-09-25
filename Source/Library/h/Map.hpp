@@ -267,6 +267,7 @@ namespace sd
         {
             _root = other._root;
             _size = other._size;
+            _guardPtr = other._guardPtr;
             other._root = other._guardPtr;
             other._size = 0;
         }
@@ -291,12 +292,13 @@ namespace sd
             clear();
             _root = other._root;
             _size = other._size;
+            _guardPtr = other._guardPtr;
             other._root = other._guardPtr;
             other._size = 0;
             return *this;
         }
 
-        Map<K, T> &operator=(std::initializer_list<T> ilist)
+        Map<K, T> &operator=(std::initializer_list<Pair> ilist)
         {
             clear();
             insert(ilist);
@@ -307,13 +309,15 @@ namespace sd
         T &at(const K &key)
         {
             auto node = findNode(key);
-            return !isGuard(node) ? node->getItem() : throw std::runtime_error("Value not found");
+            assertNode(node);
+            return node->getItem();
         }
 
         const T &at(const K &key) const
         {
             auto node = findConstNode(key);
-            return !isGuard(node) ? node->getItem() : throw std::runtime_error("Value not found");
+            assertNode(node);
+            return node->getItem();
         }
 
         T &operator[](const K &key) { return at(key); }
@@ -348,10 +352,8 @@ namespace sd
         void remove(const K &key)
         {
             auto node = findNode(key);
-            if (!isGuard(node))
-            {
-                removeNode(node);
-            }
+            assertNode(node);
+            removeNode(node);
         }
 
         void swap(Map<K, T> &other)
@@ -398,15 +400,6 @@ namespace sd
         ConstReverseIterator crEnd() const { return ConstReverseIterator{this, const_cast<MapNodePtr>(_guardPtr)}; }
 
     private:
-        const T &getConstItem(const K &key) const
-        {
-            auto node = findNode(key);
-            assertNode(node);
-            return node->getItem();
-        }
-
-        T &getItem(const K &key) { const_cast<T &>(getConstItem(key)); }
-
         MapNodePtr findNode(const K &key) { return const_cast<MapNodePtr>(findConstNode(key)); }
 
         ConstMapNodePtr findConstNode(const K &key) const
@@ -802,7 +795,7 @@ namespace sd
 
         void assertNode(ConstMapNodePtr ptr) const
         {
-            if (!ptr)
+            if (isGuard(ptr))
             {
                 throw std::out_of_range("Item was not found");
             }

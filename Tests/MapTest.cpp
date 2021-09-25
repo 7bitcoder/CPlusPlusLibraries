@@ -47,18 +47,18 @@ TEST_F(MapTest, AtTest)
     EXPECT_EQ(l.at(4), "yay");
     EXPECT_EQ(l.at(5), "tej");
 
-    EXPECT_THROW(l.at(-2), std::runtime_error);
+    EXPECT_THROW(l.at(-2), std::out_of_range);
     EXPECT_THROW(
         try
         {
             l.at(22);
-        } catch (const std::runtime_error &e)
+        } catch (const std::out_of_range &e)
         {
             // and this tests that it has the correct message
-            EXPECT_STREQ("Value not found", e.what());
+            EXPECT_STREQ("Item was not found", e.what());
             throw;
         },
-        std::runtime_error);
+        std::out_of_range);
 }
 
 TEST_F(MapTest, AtOperatorTest)
@@ -71,18 +71,18 @@ TEST_F(MapTest, AtOperatorTest)
     EXPECT_EQ(l[4], "yay");
     EXPECT_EQ(l[5], "tej");
 
-    EXPECT_THROW(l[-2], std::runtime_error);
+    EXPECT_THROW(l[-2], std::out_of_range);
     EXPECT_THROW(
         try
         {
             l[22];
-        } catch (const std::runtime_error &e)
+        } catch (const std::out_of_range &e)
         {
             // and this tests that it has the correct message
-            EXPECT_STREQ("Value not found", e.what());
+            EXPECT_STREQ("Item was not found", e.what());
             throw;
         },
-        std::runtime_error);
+        std::out_of_range);
 }
 
 TEST_F(MapTest, AtOperatorClassTest)
@@ -95,18 +95,18 @@ TEST_F(MapTest, AtOperatorClassTest)
     EXPECT_EQ(l[{4}], "yay");
     EXPECT_EQ(l[{5}], "tej");
 
-    EXPECT_THROW(l[{12}], std::runtime_error);
+    EXPECT_THROW(l[{12}], std::out_of_range);
     EXPECT_THROW(
         try
         {
             l[{54}];
-        } catch (const std::runtime_error &e)
+        } catch (const std::out_of_range &e)
         {
             // and this tests that it has the correct message
-            EXPECT_STREQ("Value not found", e.what());
+            EXPECT_STREQ("Item was not found", e.what());
             throw;
         },
-        std::runtime_error);
+        std::out_of_range);
 }
 
 TEST_F(MapTest, IteratorClassTest)
@@ -644,132 +644,36 @@ TEST_F(MapTest, EmplaceClassTest)
 
 TEST_F(MapTest, RemoveClassTest)
 {
-    sd::Map<TestClass, std::string> l = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
-
-    l.remove({1});
-    l.remove({4});
-
-    EXPECT_EQ(l[{2}], "may");
-    EXPECT_EQ(l[{3}], "bay");
-    EXPECT_EQ(l[{5}], "tej");
+    //sd::Map<TestClass, std::string> l = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
+    //
+    //l.remove({1});
+    //l.remove({4});
+    //
+    //EXPECT_EQ(l[{2}], "may");
+    //EXPECT_EQ(l[{3}], "bay");
+    //EXPECT_EQ(l[{5}], "tej");
 }
 
 TEST_F(MapTest, RemoveFailClassTest)
 {
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    sd::Map<TestClass, std::string> l = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
 
     EXPECT_THROW(
         try
         {
-            l.remove(22);
+            l.remove({22});
         } catch (const std::out_of_range &e)
         {
             // and this tests that it has the correct message
-            EXPECT_STREQ("Index: 22 exceeded allowed boundaries, current list size is: 5", e.what());
+            EXPECT_STREQ("Item was not found", e.what());
             throw;
         },
         std::out_of_range);
 }
 
-TEST_F(MapTest, PopFrontClassTest)
-{
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
-
-    l.popFront();
-    l.popFront();
-
-    EXPECT_EQ(l[0], l.front());
-
-    EXPECT_EQ(l[0], TestClass{3});
-    EXPECT_EQ(l[1], TestClass{4});
-    EXPECT_EQ(l[2], TestClass{5});
-}
-
-TEST_F(MapTest, PopFrontToEmptyClassTest)
-{
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
-
-    l.popFront();
-    l.popFront();
-    l.popFront();
-    l.popFront();
-
-    EXPECT_EQ(l.back(), l.front());
-    EXPECT_EQ(l[0], TestClass{5});
-
-    l.popFront();
-
-    EXPECT_TRUE(l.empty());
-}
-
-TEST_F(MapTest, PopFrontFailClassTest)
-{
-    sd::List<TestClass> l;
-
-    EXPECT_THROW(
-        try
-        {
-            l.popFront();
-        } catch (const std::runtime_error &e)
-        {
-            // and this tests that it has the correct message
-            EXPECT_STREQ("List is empty", e.what());
-            throw;
-        },
-        std::runtime_error);
-}
-
-TEST_F(MapTest, PopBackClassTest)
-{
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
-
-    l.popBack();
-    l.popBack();
-
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{2});
-    EXPECT_EQ(l[2], TestClass{3});
-
-    EXPECT_EQ(l[2], l.back());
-}
-
-TEST_F(MapTest, PopBackToEmptyClassTest)
-{
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
-
-    l.popBack();
-    l.popBack();
-    l.popBack();
-    l.popBack();
-
-    EXPECT_EQ(l.back(), l.front());
-    EXPECT_EQ(l[0], TestClass{1});
-
-    l.popBack();
-
-    EXPECT_TRUE(l.empty());
-}
-
-TEST_F(MapTest, PopBackFailClassTest)
-{
-    sd::List<TestClass> l;
-
-    EXPECT_THROW(
-        try
-        {
-            l.popBack();
-        } catch (const std::runtime_error &e)
-        {
-            // and this tests that it has the correct message
-            EXPECT_STREQ("List is empty", e.what());
-            throw;
-        },
-        std::runtime_error);
-}
-
 TEST_F(MapTest, ClearClassTest)
 {
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    sd::Map<TestClass, std::string> l = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
 
     EXPECT_EQ(l.size(), 5);
     EXPECT_TRUE(l.begin());
@@ -782,23 +686,23 @@ TEST_F(MapTest, ClearClassTest)
 
 TEST_F(MapTest, SizeClassTest)
 {
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    sd::Map<TestClass, std::string> l = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
 
     EXPECT_EQ(l.size(), 5);
 
-    l.pushBack({22});
+    l.emplace(22, "111");
 
     EXPECT_EQ(l.size(), 6);
 
-    l.remove(0);
-    l.remove(0);
+    l.remove({22});
+    l.remove({5});
 
     EXPECT_EQ(l.size(), 4);
 }
 
 TEST_F(MapTest, EmptyClassTest)
 {
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    sd::Map<TestClass, std::string> l = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
 
     EXPECT_FALSE(l.empty());
 
@@ -807,147 +711,139 @@ TEST_F(MapTest, EmptyClassTest)
     EXPECT_TRUE(l.empty());
 }
 
-TEST_F(MapTest, SpawnConstructorClassTest)
-{
-    sd::List<TestClass> l(3, TestClass{1});
-
-    EXPECT_EQ(l.size(), 3);
-
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{1});
-    EXPECT_EQ(l[2], TestClass{1});
-}
-
 TEST_F(MapTest, IteratorConstructorClassTest)
 {
-    std::vector<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
-    sd::List<TestClass> l(v.begin(), v.end());
+    std::vector<std::pair<TestClass, std::string>> v = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
+    sd::Map<TestClass, std::string> l(v.begin(), v.end());
 
     EXPECT_EQ(l.size(), 5);
 
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{2});
-    EXPECT_EQ(l[2], TestClass{3});
-    EXPECT_EQ(l[3], TestClass{4});
-    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[{1}], "hey");
+    EXPECT_EQ(l[{2}], "may");
+    EXPECT_EQ(l[{3}], "bay");
+    EXPECT_EQ(l[{4}], "yay");
+    EXPECT_EQ(l[{5}], "tej");
 }
 
 TEST_F(MapTest, CopyConstructorClassTest)
 {
-    sd::List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
-    sd::List<TestClass> l(v);
+    sd::Map<TestClass, std::string> v = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
+    sd::Map<TestClass, std::string> l(v);
 
     EXPECT_EQ(l.size(), 5);
 
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{2});
-    EXPECT_EQ(l[2], TestClass{3});
-    EXPECT_EQ(l[3], TestClass{4});
-    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[{1}], "hey");
+    EXPECT_EQ(l[{2}], "may");
+    EXPECT_EQ(l[{3}], "bay");
+    EXPECT_EQ(l[{4}], "yay");
+    EXPECT_EQ(l[{5}], "tej");
 }
 
 TEST_F(MapTest, MoveConstructorClassTest)
 {
-    sd::List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
-    sd::List<TestClass> l(std::move(v));
+    sd::Map<TestClass, std::string> v = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
+    sd::Map<TestClass, std::string> l(std::move(v));
 
     EXPECT_TRUE(v.empty());
     EXPECT_EQ(l.size(), 5);
 
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{2});
-    EXPECT_EQ(l[2], TestClass{3});
-    EXPECT_EQ(l[3], TestClass{4});
-    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[{1}], "hey");
+    EXPECT_EQ(l[{2}], "may");
+    EXPECT_EQ(l[{3}], "bay");
+    EXPECT_EQ(l[{4}], "yay");
+    EXPECT_EQ(l[{5}], "tej");
 }
 
 TEST_F(MapTest, InitializerListConstructorClassTest)
 {
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    sd::Map<TestClass, std::string> l = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
 
     EXPECT_EQ(l.size(), 5);
 
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{2});
-    EXPECT_EQ(l[2], TestClass{3});
-    EXPECT_EQ(l[3], TestClass{4});
-    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[{1}], "hey");
+    EXPECT_EQ(l[{2}], "may");
+    EXPECT_EQ(l[{3}], "bay");
+    EXPECT_EQ(l[{4}], "yay");
+    EXPECT_EQ(l[{5}], "tej");
 }
 
 TEST_F(MapTest, AssignmentClassTest)
 {
-    sd::List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
-    sd::List<TestClass> l;
+    sd::Map<TestClass, std::string> v = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
+    sd::Map<TestClass, std::string> l;
     l = v;
 
     EXPECT_EQ(l.size(), 5);
 
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{2});
-    EXPECT_EQ(l[2], TestClass{3});
-    EXPECT_EQ(l[3], TestClass{4});
-    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[{1}], "hey");
+    EXPECT_EQ(l[{2}], "may");
+    EXPECT_EQ(l[{3}], "bay");
+    EXPECT_EQ(l[{4}], "yay");
+    EXPECT_EQ(l[{5}], "tej");
 }
 
 TEST_F(MapTest, MoveAssignmentClassTest)
 {
-    sd::List<TestClass> v = {{1}, {2}, {3}, {4}, {5}};
-    sd::List<TestClass> l;
+    sd::Map<TestClass, std::string> v = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
+    sd::Map<TestClass, std::string> l;
     l = std::move(v);
 
     EXPECT_TRUE(v.empty());
     EXPECT_EQ(l.size(), 5);
 
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{2});
-    EXPECT_EQ(l[2], TestClass{3});
-    EXPECT_EQ(l[3], TestClass{4});
-    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[{1}], "hey");
+    EXPECT_EQ(l[{2}], "may");
+    EXPECT_EQ(l[{3}], "bay");
+    EXPECT_EQ(l[{4}], "yay");
+    EXPECT_EQ(l[{5}], "tej");
 }
 
 TEST_F(MapTest, InitializerListAssignmentClassTest)
 {
-    sd::List<TestClass> l;
-    l = {{1}, {2}, {3}, {4}, {5}};
+    sd::Map<TestClass, std::string> l;
+    l = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
 
     EXPECT_EQ(l.size(), 5);
 
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{2});
-    EXPECT_EQ(l[2], TestClass{3});
-    EXPECT_EQ(l[3], TestClass{4});
-    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l[{1}], "hey");
+    EXPECT_EQ(l[{2}], "may");
+    EXPECT_EQ(l[{3}], "bay");
+    EXPECT_EQ(l[{4}], "yay");
+    EXPECT_EQ(l[{5}], "tej");
 }
 
 TEST_F(MapTest, ConstClassTest)
 {
-    const sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
+    const sd::Map<TestClass, std::string> l = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
 
-    EXPECT_EQ(l[0], TestClass{1});
-    EXPECT_EQ(l[1], TestClass{2});
-    EXPECT_EQ(l[2], TestClass{3});
-    EXPECT_EQ(l[3], TestClass{4});
-    EXPECT_EQ(l[4], TestClass{5});
+    EXPECT_EQ(l.size(), 5);
+
+    EXPECT_EQ(l[{1}], "hey");
+    EXPECT_EQ(l[{2}], "may");
+    EXPECT_EQ(l[{3}], "bay");
+    EXPECT_EQ(l[{4}], "yay");
+    EXPECT_EQ(l[{5}], "tej");
 }
 
 TEST_F(MapTest, SwapClassTest)
 {
-    sd::List<TestClass> l = {{1}, {2}, {3}, {4}, {5}};
-    sd::List<TestClass> l2 = {{11}, {12}, {13}, {14}, {15}};
+    sd::Map<TestClass, std::string> l = {{{1}, "hey"}, {{2}, "may"}, {{3}, "bay"}, {{4}, "yay"}, {{5}, "tej"}};
+    sd::Map<TestClass, std::string> l2 = {{{11}, "hey"}, {{12}, "may"}, {{13}, "bay"}, {{14}, "yay"}};
 
     l.swap(l2);
 
-    EXPECT_EQ(l2[0], TestClass{1});
-    EXPECT_EQ(l2[1], TestClass{2});
-    EXPECT_EQ(l2[2], TestClass{3});
-    EXPECT_EQ(l2[3], TestClass{4});
-    EXPECT_EQ(l2[4], TestClass{5});
+    EXPECT_EQ(l.size(), 4);
+
+    EXPECT_EQ(l[{11}], "hey");
+    EXPECT_EQ(l[{12}], "may");
+    EXPECT_EQ(l[{13}], "bay");
+    EXPECT_EQ(l[{14}], "yay");
+
     EXPECT_EQ(l2.size(), 5);
 
-    EXPECT_EQ(l[0], TestClass{11});
-    EXPECT_EQ(l[1], TestClass{12});
-    EXPECT_EQ(l[2], TestClass{13});
-    EXPECT_EQ(l[3], TestClass{14});
-    EXPECT_EQ(l[4], TestClass{15});
-    EXPECT_EQ(l.size(), 5);
+    EXPECT_EQ(l2[{1}], "hey");
+    EXPECT_EQ(l2[{2}], "may");
+    EXPECT_EQ(l2[{3}], "bay");
+    EXPECT_EQ(l2[{4}], "yay");
+    EXPECT_EQ(l2[{5}], "tej");
 }

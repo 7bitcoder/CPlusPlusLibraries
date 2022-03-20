@@ -1,27 +1,26 @@
 #pragma once
-#include <iostream>
 #include <format>
+#include <iostream>
+#include <string>
 
 namespace sd
 {
-    template <class T>
-    class ListNode
+    template <class T> class ListNode
     {
-    public:
+      public:
         using ItemType = T;
         using NodePtr = ListNode<T> *;
         using ConstNodePtr = const ListNode<T> *;
 
-    private:
+      private:
         T _item;
         NodePtr _left = nullptr;
         NodePtr _right = nullptr;
 
-    public:
+      public:
         ListNode() = delete;
 
-        template <class... Types>
-        ListNode(Types... args) : _item(args...) {}
+        template <class... Types> ListNode(Types... args) : _item{args...} {}
         ListNode(const T &i) : _item(i) {}
         ListNode(T &&i) : _item(i) {}
 
@@ -58,17 +57,18 @@ namespace sd
     template <class T, bool R> // R = Reverse
     class ListIterator
     {
-    public:
+      public:
         using iterator_category = std::bidirectional_iterator_tag;
         using value_type = T;
         using pointer = T *;
         using reference = T &;
-        using NodePtr = std::conditional_t<std::is_const<T>::value, const ListNode<std::remove_cv_t<T>> *, ListNode<T> *>;
+        using NodePtr =
+            std::conditional_t<std::is_const<T>::value, const ListNode<std::remove_cv_t<T>> *, ListNode<T> *>;
 
-    protected:
+      protected:
         NodePtr _ptr = nullptr;
 
-    public:
+      public:
         ListIterator(NodePtr ptr = nullptr) { _ptr = ptr; }
         ListIterator(const ListIterator<T, R> &rawIterator) = default;
         ~ListIterator() = default;
@@ -132,10 +132,9 @@ namespace sd
         const T *operator->() const { return &_ptr->getItem(); }
     };
 
-    template <class T>
-    class List
+    template <class T> class List
     {
-    private:
+      private:
         using NodePtr = ListNode<T> *;
         using ConstNodePtr = const ListNode<T> *;
 
@@ -143,7 +142,7 @@ namespace sd
         NodePtr _tail = nullptr;
         size_t _size = 0;
 
-    public:
+      public:
         using Iterator = ListIterator<T, false>;
         using ConstIterator = ListIterator<const T, false>;
 
@@ -161,8 +160,7 @@ namespace sd
             }
         }
 
-        template <class InputIt>
-        List(InputIt first, InputIt last)
+        template <class InputIt> List(InputIt first, InputIt last)
         {
             for (InputIt it = first; it != last; ++it)
             {
@@ -285,14 +283,14 @@ namespace sd
 
         void pushFront(T &&item) { insertNode(0, makeNode(std::move(item))); }
 
-        template <class... Types>
-        void emplaceBack(Types... args) { insertNode(size(), makeNodeWithItem(args...)); }
+        template <class... Types> void emplaceBack(Types... args) { insertNode(size(), makeNodeWithItem(args...)); }
 
-        template <class... Types>
-        void emplaceFront(Types... args) { insertNode(0, makeNodeWithItem(args...)); }
+        template <class... Types> void emplaceFront(Types... args) { insertNode(0, makeNodeWithItem(args...)); }
 
-        template <class... Types>
-        void emplace(size_t index, Types... args) { insertNode(index, makeNodeWithItem(args...)); }
+        template <class... Types> void emplace(size_t index, Types... args)
+        {
+            insertNode(index, makeNodeWithItem(args...));
+        }
 
         void insert(size_t index, const T &item) { insertNode(index, makeNode(item)); }
 
@@ -345,7 +343,7 @@ namespace sd
         ConstReverseIterator crBegin() const { return ConstReverseIterator{const_cast<NodePtr>(_tail)}; }
         ConstReverseIterator crEnd() const { return ConstReverseIterator{}; }
 
-    private:
+      private:
         NodePtr getNode(size_t index) { return const_cast<NodePtr>(getConstNode(index)); }
 
         ConstNodePtr getConstNode(size_t index) const
@@ -455,7 +453,9 @@ namespace sd
         {
             if (index + 1 > size())
             {
-                throw std::out_of_range(std::format("Index: {} exceeded allowed boundaries, current list size is: {}", index, size()));
+                throw std::out_of_range(
+                    std::string("Index: ") + std::to_string(index) +
+                    " exceeded allowed boundaries, current list size is: " + std::to_string(size()));
             }
         }
 
@@ -497,30 +497,32 @@ namespace sd
 
         NodePtr makeNode(T &&item) { return new ListNode<T>(std::move(item)); }
 
-        template <class... Types>
-        NodePtr makeNodeWithItem(Types... args) { return new ListNode<T>(args...); }
+        template <class... Types> NodePtr makeNodeWithItem(Types... args) { return new ListNode<T>(args...); }
 
         void deleteNode(NodePtr ptr) { delete ptr; }
     };
 
-    template <class T>
-    bool operator==(const List<T> &lhs, const List<T> &rhs) { return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
+    template <class T> bool operator==(const List<T> &lhs, const List<T> &rhs)
+    {
+        return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+    }
 
-    template <class T>
-    bool operator!=(const List<T> &lhs, const List<T> &rhs) { return !(lhs == rhs); }
+    template <class T> bool operator!=(const List<T> &lhs, const List<T> &rhs) { return !(lhs == rhs); }
 
-    template <class T>
-    bool operator<(const List<T> &lhs, const List<T> &rhs) { return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
+    template <class T> bool operator<(const List<T> &lhs, const List<T> &rhs)
+    {
+        return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+    }
 
-    template <class T>
-    bool operator<=(const List<T> &lhs, const List<T> &rhs) { return lhs < rhs || lhs == rhs; }
+    template <class T> bool operator<=(const List<T> &lhs, const List<T> &rhs) { return lhs < rhs || lhs == rhs; }
 
-    template <class T>
-    bool operator>(const List<T> &lhs, const List<T> &rhs) { return std::lexicographical_compare(rhs.begin(), rhs.end(), lhs.begin(), lhs.end()); }
+    template <class T> bool operator>(const List<T> &lhs, const List<T> &rhs)
+    {
+        return std::lexicographical_compare(rhs.begin(), rhs.end(), lhs.begin(), lhs.end());
+    }
 
-    template <class T>
-    bool operator>=(const List<T> &lhs, const List<T> &rhs) { return lhs > rhs || lhs == rhs; }
+    template <class T> bool operator>=(const List<T> &lhs, const List<T> &rhs) { return lhs > rhs || lhs == rhs; }
 
     void linkedMain();
 
-}
+} // namespace sd

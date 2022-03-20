@@ -7,6 +7,6 @@ using namespace sd;
 
 int main(int, char **)
 {
-    //linkedMain();
-    mapMain();    
+    // linkedMain();
+    mapMain();
 }

@@ -1,35 +1,32 @@
 #include "Datio.hpp"
 #include <chrono>
 
-using namespace std::chrono;
 namespace sd
 {
+    using namespace std::chrono;
+    using namespace Time;
     namespace
     {
-        Date::TimePointDays readTotalDays(Date::TimePoint timePoint) { return floor<Date::Days>(timePoint); }
-
-        template <class Rep, class Period>
-        Date::TimePoint createTimePoint(Date::YearMontDay ymd, Date::Duration<Rep, Period> dayTime)
+        template <class Rep, class Period> TimePoint createTimePoint(YearMontDay ymd, Duration<Rep, Period> dayTime)
         {
             if (!ymd.ok())
                 ymd = ymd.year() / ymd.month() / last;
             return sys_days{ymd} + dayTime;
         }
 
-        auto decomposeTimePoint(Date::TimePoint timePoint)
+        TimePointDays readTotalDays(TimePoint timePoint) { return floor<Days>(timePoint); }
+
+        auto decomposeTimePoint(TimePoint timePoint)
         {
             auto days = readTotalDays(timePoint);
-            return std::make_pair(Date::YearMontDay{days}, timePoint - days);
+            return std::make_pair(YearMontDay{days}, timePoint - days);
         }
 
-        Date::YearMontDay readYearMonthDay(Date::TimePoint timePoint) { return decomposeTimePoint(timePoint).first; }
+        YearMontDay readYearMonthDay(TimePoint timePoint) { return decomposeTimePoint(timePoint).first; }
 
-        auto readTimeOfDay(Date::TimePoint timePoint) { return decomposeTimePoint(timePoint).second; }
+        auto readTimeOfDay(TimePoint timePoint) { return decomposeTimePoint(timePoint).second; }
 
-        Date::HHMMSS readHMMSS(Date::TimePoint timePoint)
-        {
-            return Date::HHMMSS{floor<Date::Milliseconds>(readTimeOfDay(timePoint))};
-        }
+        HHMMSS readHMMSS(TimePoint timePoint) { return HHMMSS{floor<Milliseconds>(readTimeOfDay(timePoint))}; }
 
     } // namespace
 
@@ -67,24 +64,21 @@ namespace sd
         _timePoint = createTimePoint({year, month, day}, hour + minute + second + milisecond);
     }
 
-    Date::Day Date::day() const { return getYearMonthDay().day(); }
-    Date::Month Date::month() const { return getYearMonthDay().month(); }
-    Date::Year Date::year() const { return getYearMonthDay().year(); }
-    Date::WeakDay Date::dayOfWeek() const { return {sys_days{getYearMonthDay()}}; }
+    Day Date::day() const { return getYearMonthDay().day(); }
+    Month Date::month() const { return getYearMonthDay().month(); }
+    Year Date::year() const { return getYearMonthDay().year(); }
+    WeakDay Date::dayOfWeek() const { return {sys_days{getYearMonthDay()}}; }
 
-    Date::Hours Date::hour() const { return getHHMMSS().hours(); }
-    Date::Minutes Date::minute() const { return getHHMMSS().minutes(); }
-    Date::Seconds Date::second() const { return getHHMMSS().seconds(); }
-    Date::Milliseconds Date::milisecond() const { return getHHMMSS().subseconds(); }
+    Hours Date::hour() const { return getHHMMSS().hours(); }
+    Minutes Date::minute() const { return getHHMMSS().minutes(); }
+    Seconds Date::second() const { return getHHMMSS().seconds(); }
+    Milliseconds Date::milisecond() const { return getHHMMSS().subseconds(); }
 
-    long Date::ticks() const
-    {
-        return static_cast<long>(floor<Date::Microseconds>(_timePoint).time_since_epoch().count());
-    }
+    long Date::ticks() const { return static_cast<long>(floor<Microseconds>(_timePoint).time_since_epoch().count()); }
 
-    Date::YearMontDay Date::getYearMonthDay() const { return readYearMonthDay(_timePoint); }
+    YearMontDay Date::getYearMonthDay() const { return readYearMonthDay(_timePoint); }
 
-    Date::HHMMSS Date::getHHMMSS() const { return readHMMSS(_timePoint); }
+    HHMMSS Date::getHHMMSS() const { return readHMMSS(_timePoint); }
 
     Date &Date::addYears(int years) { return addYears(Years{years}); }
     Date &Date::addMonths(int months) { return addMonths(Months{months}); }

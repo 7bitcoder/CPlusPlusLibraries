@@ -5,6 +5,9 @@
 
 #include "Datio.hpp"
 
+using namespace sd;
+using namespace Time;
+
 class DatioTest : public ::testing::Test
 {
   protected:
@@ -21,7 +24,7 @@ class DatioTest : public ::testing::Test
 
 TEST_F(DatioTest, ExampleTest)
 {
-    sd::Date date{2022, 3, 10};
+    Date date{2022, 3, 10};
 
     auto day = date.day();
     EXPECT_EQ(unsigned{day}, 10);
@@ -29,7 +32,7 @@ TEST_F(DatioTest, ExampleTest)
 
 TEST_F(DatioTest, ExampleTest2)
 {
-    sd::Date date{2022, 3, 10};
+    Date date{2022, 3, 10};
 
     auto day = date.dayOfWeek();
     EXPECT_EQ(int{date.year()}, 2022);
@@ -44,7 +47,7 @@ TEST_F(DatioTest, ExampleTest2)
 
 TEST_F(DatioTest, ExampleTest3)
 {
-    sd::Date date{2022, 3, 10, 20, 11, 1, 1};
+    Date date{2022, 3, 10, 20, 11, 1, 1};
 
     auto day = date.dayOfWeek();
     EXPECT_EQ(int{date.year()}, 2022);
@@ -59,7 +62,7 @@ TEST_F(DatioTest, ExampleTest3)
 
 TEST_F(DatioTest, ExampleTest4)
 {
-    sd::Date date{2022, 3, 10, 20, 11, 1, 1};
+    Date date{2022, 3, 10, 20, 11, 1, 1};
 
     date.addDays(21);
     date.addHours(6);
@@ -83,7 +86,7 @@ TEST_F(DatioTest, ExampleTest4)
 TEST_F(DatioTest, ExampleTest5)
 {
     using namespace std::chrono;
-    sd::Date date{2022, 3, 10, 20, 11, 1, 1};
+    Date date{2022, 3, 10, 20, 11, 1, 1};
 
     date += 21d;
     date += 6h;
@@ -107,7 +110,7 @@ TEST_F(DatioTest, ExampleTest5)
 TEST_F(DatioTest, ExampleTest6)
 {
     using namespace std::chrono;
-    sd::Date date{2022, 3, 10, 20, 11, 1, 1};
+    Date date{2022, 3, 10, 20, 11, 1, 1};
 
     date = date + 21d + 6h + 2min + 62s + 2ms + 12y;
     date.addMonths(1);
@@ -126,7 +129,7 @@ TEST_F(DatioTest, ExampleTest6)
 TEST_F(DatioTest, ExampleTest7)
 {
     using namespace std::chrono;
-    sd::Date date{2022, 3, 10, 20, 11, 1, 1};
+    Date date{2022, 3, 10, 20, 11, 1, 1};
 
     date = date - 21d - 6h - 2min - 62s - 2ms - 12y;
     date.substractMonths(1);

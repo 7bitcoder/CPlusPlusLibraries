@@ -161,11 +161,7 @@ namespace sd
         HHMMSS getHHMMSS() const;
 
       private:
-        TimePointDays getTotalDays() const;
-        template <class Rep, class Period = std::ratio<1>> Date &add(Duration<Rep, Period> duration);
-        template <class Rep, class Period = std::ratio<1>> Date &addDate(Duration<Rep, Period> duration);
-        template <class Rep, class Period = std::ratio<1>> Date &substract(Duration<Rep, Period> duration);
-        template <class Rep, class Period = std::ratio<1>> Date &substractDate(Duration<Rep, Period> duration);
+        template <class Rep, class Period> Date &add(Duration<Rep, Period> duration);
     };
 
 } // namespace sd

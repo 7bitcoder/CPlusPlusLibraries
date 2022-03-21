@@ -1,13 +1,37 @@
 #include "Datio.hpp"
 #include <chrono>
-#include <time.h>
 
 using namespace std::chrono;
 namespace sd
 {
     namespace
     {
-    }
+        Date::TimePointDays readTotalDays(Date::TimePoint timePoint) { return floor<Date::Days>(timePoint); }
+
+        template <class Rep, class Period>
+        Date::TimePoint createTimePoint(Date::YearMontDay ymd, Date::Duration<Rep, Period> dayTime)
+        {
+            if (!ymd.ok())
+                ymd = ymd.year() / ymd.month() / last;
+            return sys_days{ymd} + dayTime;
+        }
+
+        auto decomposeTimePoint(Date::TimePoint timePoint)
+        {
+            auto days = readTotalDays(timePoint);
+            return std::make_pair(Date::YearMontDay{days}, timePoint - days);
+        }
+
+        Date::YearMontDay readYearMonthDay(Date::TimePoint timePoint) { return decomposeTimePoint(timePoint).first; }
+
+        auto readTimeOfDay(Date::TimePoint timePoint) { return decomposeTimePoint(timePoint).second; }
+
+        Date::HHMMSS readHMMSS(Date::TimePoint timePoint)
+        {
+            return Date::HHMMSS{floor<Date::Milliseconds>(readTimeOfDay(timePoint))};
+        }
+
+    } // namespace
 
     Date Date::now() { return Date{system_clock::now()}; }
     Date Date::max() { return Date{system_clock::now().max()}; }
@@ -40,11 +64,7 @@ namespace sd
     }
     Date::Date(Year year, Month month, Day day, Hours hour, Minutes minute, Seconds second, Milliseconds milisecond)
     {
-        YearMontDay date{year, month, day};
-
-        TimePoint ld = sys_days{date} + hour + minute + second + milisecond;
-
-        _timePoint = ld;
+        _timePoint = createTimePoint({year, month, day}, hour + minute + second + milisecond);
     }
 
     Date::Day Date::day() const { return getYearMonthDay().day(); }
@@ -62,11 +82,9 @@ namespace sd
         return static_cast<long>(floor<Date::Microseconds>(_timePoint).time_since_epoch().count());
     }
 
-    Date::YearMontDay Date::getYearMonthDay() const { return {getTotalDays()}; }
+    Date::YearMontDay Date::getYearMonthDay() const { return readYearMonthDay(_timePoint); }
 
-    Date::TimePointDays Date::getTotalDays() const { return floor<Date::Days>(_timePoint); }
-
-    Date::HHMMSS Date::getHHMMSS() const { return HHMMSS{floor<Milliseconds>(_timePoint - getTotalDays())}; }
+    Date::HHMMSS Date::getHHMMSS() const { return readHMMSS(_timePoint); }
 
     Date &Date::addYears(int years) { return addYears(Years{years}); }
     Date &Date::addMonths(int months) { return addMonths(Months{months}); }
@@ -77,8 +95,8 @@ namespace sd
     Date &Date::addMiliseconds(int miliseconds) { return addMiliseconds(Milliseconds{miliseconds}); }
     Date &Date::addTicks(long ticks) { return add(Microseconds{ticks}); }
 
-    Date &Date::addYears(Years years) { return addDate(years); }
-    Date &Date::addMonths(Months months) { return addDate(months); }
+    Date &Date::addYears(Years years) { return add(years); }
+    Date &Date::addMonths(Months months) { return add(months); }
     Date &Date::addDays(Days days) { return add(days); }
     Date &Date::addYears(Year year) { return addYears(Years{int(year)}); }
     Date &Date::addMonths(Month month) { return addMonths(Months{unsigned(month)}); }
@@ -117,18 +135,18 @@ namespace sd
     Date &Date::substractMinutes(int minutes) { return substractMinutes(Minutes{minutes}); }
     Date &Date::substractSeconds(int seconds) { return substractSeconds(Seconds{seconds}); }
     Date &Date::substractMiliseconds(int miliseconds) { return substractMiliseconds(Milliseconds{miliseconds}); }
-    Date &Date::substractTicks(long ticks) { return substract(Microseconds{ticks}); }
+    Date &Date::substractTicks(long ticks) { return add(Microseconds{ticks}); }
 
-    Date &Date::substractYears(Years years) { return substractDate(years); }
-    Date &Date::substractMonths(Months months) { return substractDate(months); }
-    Date &Date::substractDays(Days days) { return substract(days); }
-    Date &Date::substractYears(Year year) { return substractYears(Years{int(year)}); }
-    Date &Date::substractMonths(Month month) { return substractMonths(Months{unsigned(month)}); }
-    Date &Date::substractDays(Day day) { return substractDays(Days{unsigned(day)}); }
-    Date &Date::substractHours(Hours hours) { return substract(hours); }
-    Date &Date::substractMinutes(Minutes minutes) { return substract(minutes); }
-    Date &Date::substractSeconds(Seconds seconds) { return substract(seconds); }
-    Date &Date::substractMiliseconds(Milliseconds miliseconds) { return substract(miliseconds); }
+    Date &Date::substractYears(Years years) { return add(-years); }
+    Date &Date::substractMonths(Months months) { return add(-months); }
+    Date &Date::substractDays(Days days) { return add(-days); }
+    Date &Date::substractYears(Year year) { return add(Years{-int(year)}); }
+    Date &Date::substractMonths(Month month) { return add(Months{-unsigned(month)}); }
+    Date &Date::substractDays(Day day) { return add(Days{-unsigned(day)}); }
+    Date &Date::substractHours(Hours hours) { return add(-hours); }
+    Date &Date::substractMinutes(Minutes minutes) { return add(-minutes); }
+    Date &Date::substractSeconds(Seconds seconds) { return add(-seconds); }
+    Date &Date::substractMiliseconds(Milliseconds miliseconds) { return add(-miliseconds); }
 
     Date &Date::operator-=(Years years) { return substractYears(years); }
     Date &Date::operator-=(Months months) { return substractMonths(months); }
@@ -154,37 +172,16 @@ namespace sd
 
     template <class Rep, class Period> Date &Date::add(Duration<Rep, Period> duration)
     {
-        _timePoint += duration;
-        return *this;
-    }
-
-    template <class Rep, class Period> Date &Date::addDate(Duration<Rep, Period> duration)
-    {
-        auto days = getTotalDays();
-        auto timeOfDay = _timePoint - days;
-        year_month_day ymd{days};
-        ymd += duration;
-        if (!ymd.ok())
-            ymd = ymd.year() / ymd.month() / last;
-        _timePoint = sys_days{ymd} + timeOfDay;
-        return *this;
-    }
-
-    template <class Rep, class Period> Date &Date::substract(Duration<Rep, Period> duration)
-    {
-        _timePoint -= duration;
-        return *this;
-    }
-
-    template <class Rep, class Period> Date &Date::substractDate(Duration<Rep, Period> duration)
-    {
-        auto days = getTotalDays();
-        auto timeOfDay = _timePoint - days;
-        year_month_day ymd{days};
-        ymd -= duration;
-        if (!ymd.ok())
-            ymd = ymd.year() / ymd.month() / last;
-        _timePoint = sys_days{ymd} + timeOfDay;
+        if constexpr (Duration<Rep, Period>::period::num < Months::period::num)
+        {
+            _timePoint += duration;
+        }
+        else
+        {
+            auto [ymd, timeOfDay] = decomposeTimePoint(_timePoint);
+            ymd += duration;
+            _timePoint = createTimePoint(ymd, timeOfDay);
+        }
         return *this;
     }
 

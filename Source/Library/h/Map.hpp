@@ -33,14 +33,12 @@ namespace sd
 
         MapNode(const Pair &p) : _keyItem{p} {}
         MapNode(Pair &&p) : _keyItem{std::move(p)} {}
-        template <class... Args1, class... Args2>
+        // template <class... Args1, class... Args2>
         // MapNode(std::tuple<Args1...> args1, std::tuple<Args2...> args2)
         //     : _keyItem(std::piecewise_construct, args1, args2)
         // {
         // }
-        MapNode(const K &k, const T &i) : _keyItem{k, i}
-        {
-        }
+        MapNode(const K &k, const T &i) : _keyItem{k, i} {}
         MapNode(K &&k, T &&i) : _keyItem{std::move(k), std::move(i)} {}
 
         ~MapNode() = default;

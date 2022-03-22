@@ -3,10 +3,9 @@
 #include <iostream>
 #include <thread>
 
-#include "Datio.hpp"
+#include "Date.hpp"
 
 using namespace sd;
-using namespace Time;
 
 class DatioTest : public ::testing::Test
 {

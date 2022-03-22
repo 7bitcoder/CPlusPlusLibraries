@@ -1,10 +1,9 @@
-#include "Datio.hpp"
+#include "Date.hpp"
 #include <chrono>
 
 namespace sd
 {
     using namespace std::chrono;
-    using namespace Time;
     namespace
     {
         template <class Rep, class Period> TimePoint createTimePoint(YearMontDay ymd, Duration<Rep, Period> dayTime)
@@ -14,11 +13,11 @@ namespace sd
             return sys_days{ymd} + dayTime;
         }
 
-        TimePointDays readTotalDays(TimePoint timePoint) { return floor<Days>(timePoint); }
+        TimePointDays toTotalDays(TimePoint timePoint) { return floor<Days>(timePoint); }
 
         auto decomposeTimePoint(TimePoint timePoint)
         {
-            auto days = readTotalDays(timePoint);
+            auto days = toTotalDays(timePoint);
             return std::make_pair(YearMontDay{days}, timePoint - days);
         }
 
@@ -69,16 +68,16 @@ namespace sd
     Year Date::year() const { return getYearMonthDay().year(); }
     WeakDay Date::dayOfWeek() const { return {sys_days{getYearMonthDay()}}; }
 
-    Hours Date::hour() const { return getHHMMSS().hours(); }
-    Minutes Date::minute() const { return getHHMMSS().minutes(); }
-    Seconds Date::second() const { return getHHMMSS().seconds(); }
-    Milliseconds Date::milisecond() const { return getHHMMSS().subseconds(); }
+    Hours Date::hour() const { return timeOfDay().hours(); }
+    Minutes Date::minute() const { return timeOfDay().minutes(); }
+    Seconds Date::second() const { return timeOfDay().seconds(); }
+    Milliseconds Date::milisecond() const { return timeOfDay().subseconds(); }
 
     long Date::ticks() const { return static_cast<long>(floor<Microseconds>(_timePoint).time_since_epoch().count()); }
 
     YearMontDay Date::getYearMonthDay() const { return readYearMonthDay(_timePoint); }
 
-    HHMMSS Date::getHHMMSS() const { return readHMMSS(_timePoint); }
+    HHMMSS Date::timeOfDay() const { return readHMMSS(_timePoint); }
 
     Date &Date::addYears(int years) { return addYears(Years{years}); }
     Date &Date::addMonths(int months) { return addMonths(Months{months}); }

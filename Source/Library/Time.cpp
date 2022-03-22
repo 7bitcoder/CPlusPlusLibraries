@@ -44,6 +44,14 @@ namespace sd
     Time Time::min() { return Time{Microseconds::min().count()}; }
     Time Time::zero() { return Time{Microseconds::zero().count()}; }
 
+    Time Time::parse(std::string source, std::string format) {
+        Time time{0};
+        std::stringstream st{source};
+        std::chrono::from_stream(st, format.c_str(), time._time);
+        return time;
+    }
+
+
     Time Time::fromDays(double days) { return from<Days>(days); }
     Time Time::fromHours(double hours) { return from<Hours>(hours); }
     Time Time::fromMinutes(double minutes) { return from<Minutes>(minutes); }

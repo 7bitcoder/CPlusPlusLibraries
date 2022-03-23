@@ -7,10 +7,9 @@
 namespace sd
 {
     using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
-    using TimePointDays = std::chrono::time_point<std::chrono::system_clock, Days>;
-    class Date
+    using TimePointDays = std::chrono::time_point<std::chrono::system_clock, std::chrono::days>;
+    struct Date
     {
-      public:
       private:
         TimePoint _timePoint;
 
@@ -21,125 +20,76 @@ namespace sd
         static Date today();
         static Date utcNow();
 
-        Date(const Date &) = default;
-        Date(long ticks);
-        Date(Year year, Month month, Day day);
-        Date(Year year, Month month, Day day, Hours hour, Minutes minute, Seconds second);
-        Date(Year year, Month month, Day day, Hours hour, Minutes minute, Seconds second, Milliseconds milisecond);
-
+        Date(long long ticks);
         Date(int year, unsigned month, unsigned day);
         Date(int year, unsigned month, unsigned day, int hour, int minute, int second);
         Date(int year, unsigned month, unsigned day, int hour, int minute, int second, int milisecond);
+
+        Date(const Date &) = default;
 
       private:
         Date(TimePoint timePoint);
 
       public:
-        Year year() const;
-        Month month() const;
-        Day day() const;
-        WeakDay dayOfWeek() const;
+        int year() const;
+        int month() const;
+        int day() const;
+        // int dayOfWeek() const;
         // const int dayOfYear() const;
-        Hours hour() const;
-        Minutes minute() const;
-        Seconds second() const;
-        Milliseconds milisecond() const;
-        long ticks() const;
-        HHMMSS timeOfDay() const;
-        YearMontDay getYearMonthDay() const;
+        int hour() const;
+        int minute() const;
+        int second() const;
+        int milisecond() const;
+        long long ticks() const;
 
-        Date &addYears(int years);
-        Date &addMonths(int months);
-        Date &addDays(int days);
-        Date &addHours(int hours);
-        Date &addMinutes(int minutes);
-        Date &addSeconds(int seconds);
-        Date &addMiliseconds(int miliseconds);
-        Date &addTicks(long ticks);
+        Date &add(const Time &time);
 
-        Date &addYears(Years years);
-        Date &addMonths(Months months);
-        Date &addDays(Days days);
-        Date &addYears(Year year);
-        Date &addMonths(Month month);
-        Date &addDays(Day day);
-        Date &addHours(Hours hours);
-        Date &addMinutes(Minutes minutes);
-        Date &addSeconds(Seconds seconds);
-        Date &addMiliseconds(Milliseconds miliseconds);
-
-        Date &substractYears(int years);
-        Date &substractMonths(int months);
-        Date &substractDays(int days);
-        Date &substractHours(int hours);
-        Date &substractMinutes(int minutes);
-        Date &substractSeconds(int seconds);
-        Date &substractMiliseconds(int miliseconds);
-        Date &substractTicks(long ticks);
-
-        Date &substractYears(Years years);
-        Date &substractMonths(Months months);
-        Date &substractDays(Days days);
-        Date &substractYears(Year year);
-        Date &substractMonths(Month month);
-        Date &substractDays(Day day);
-        Date &substractHours(Hours hours);
-        Date &substractMinutes(Minutes minutes);
-        Date &substractSeconds(Seconds seconds);
-        Date &substractMiliseconds(Milliseconds miliseconds);
+        Time substract(const Date &time);
+        Date &substract(const Time &time);
 
         Date &operator=(const Date &other) = default;
 
-        Date &operator+=(Years years);
-        Date &operator+=(Months months);
-        Date &operator+=(Days days);
-        Date &operator+=(Year year);
-        Date &operator+=(Month month);
-        Date &operator+=(Day day);
-        Date &operator+=(Hours hours);
-        Date &operator+=(Minutes minutes);
-        Date &operator+=(Seconds seconds);
-        Date &operator+=(Milliseconds miliseconds);
+        Date &operator+=(const Time &time);
 
-        Date operator+(Years years);
-        Date operator+(Months months);
-        Date operator+(Days days);
-        Date operator+(Year year);
-        Date operator+(Month month);
-        Date operator+(Day day);
-        Date operator+(Hours hours);
-        Date operator+(Minutes minutes);
-        Date operator+(Seconds seconds);
-        Date operator+(Milliseconds miliseconds);
+        Date operator+(const Time &time);
 
-        Date &operator-=(Years years);
-        Date &operator-=(Months months);
-        Date &operator-=(Days days);
-        Date &operator-=(Year year);
-        Date &operator-=(Month month);
-        Date &operator-=(Day day);
-        Date &operator-=(Hours hours);
-        Date &operator-=(Minutes minutes);
-        Date &operator-=(Seconds seconds);
-        Date &operator-=(Milliseconds miliseconds);
+        Date &operator-=(const Time &time);
 
-        Date operator-(Years years);
-        Date operator-(Months months);
-        Date operator-(Days days);
-        Date operator-(Year year);
-        Date operator-(Month month);
-        Date operator-(Day day);
-        Date operator-(Hours hours);
-        Date operator-(Minutes minutes);
-        Date operator-(Seconds seconds);
-        Date operator-(Milliseconds miliseconds);
-
-        static int compare(Date date1, Date date2);
-        int compareTo(Date date);
-        int daysInMonth(int year, int month);
+        Time operator-(const Date &time);
+        Date operator-(const Time &time);
 
       private:
-        template <class Rep, class Period> Date &add(Duration<Rep, Period> duration);
+        // template <class Rep, class Period> Date &add(Duration<Rep, Period> duration);
     };
 
+    namespace dev
+    {
+        struct Month;
+        struct Day;
+
+        struct Year : public std::chrono::year
+        {
+            Year(int year);
+            Date operator/(const Month &month) const;
+            Date operator/(const Day &day) const;
+        };
+
+        struct Month : public std::chrono::month
+        {
+            Month(unsigned month);
+            Date operator/(const Day &day) const;
+            Date operator/(const Year &year) const;
+        };
+
+        struct Day : public std::chrono::day
+        {
+            Day(unsigned day);
+            Date operator/(const Month &month) const;
+            Date operator/(const Year &year) const;
+        };
+    } // namespace dev
+
+    dev::Year operator"" _y(unsigned long long year);
+    dev::Month operator"" _m(unsigned long long month);
+    dev::Day operator"" _d(unsigned long long day);
 } // namespace sd

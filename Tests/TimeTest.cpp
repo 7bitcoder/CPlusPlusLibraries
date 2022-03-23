@@ -103,7 +103,7 @@ TEST_F(TimeTest, DurationConstructorTest)
 
 #pragma endregion
 
-#pragma region StaticFromCreations
+#pragma region SpecialTypeCreations
 
 TEST_F(TimeTest, FromDaysDoubleTest)
 {
@@ -203,13 +203,9 @@ TEST_F(TimeTest, FromMicrosecondsDoubleTest)
 }
 
 TEST_F(TimeTest, FromMicrosecondsIntTest)
-{
     auto time = Time::fromMicroseconds(2);
-
     EXPECT_EQ(time, (Time{0, 0, 0, 0, 0, 2}));
     EXPECT_EQ(time.totalMicroseconds(), 2);
-}
-
 #pragma endregion
 
 #pragma region StaticConstants

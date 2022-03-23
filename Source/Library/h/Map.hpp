@@ -337,8 +337,8 @@ namespace sd
             }
         }
 
-        // template <class... Args1, class... Args2> void emplace(std::tuple<Args1...> args1, std::tuple<Args2...>
-        // args2)
+        // template <class... Args1, class... Args2> void
+        // emplace(std::tuple<Args1...> args1, std::tuple<Args2...> args2)
         // {
         //     insertNode(makeNodeWithItem(args1, args2));
         // }
@@ -816,7 +816,8 @@ namespace sd
         MapNodePtr makeNode(const Pair &pair) { return new MapNode<K, T>(pair); }
 
         // template <class... Args1, class... Args2>
-        // MapNodePtr makeNodeWithItem(std::tuple<Args1...> args1, std::tuple<Args2...> args2)
+        // MapNodePtr makeNodeWithItem(std::tuple<Args1...> args1,
+        // std::tuple<Args2...> args2)
         // {
         //     return new MapNode<K, T>(args1, args2);
         // }

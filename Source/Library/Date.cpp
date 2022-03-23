@@ -3,6 +3,21 @@
 
 namespace sd
 {
+    using Year = std::chrono::year;
+    using Month = std::chrono::month;
+    using Day = std::chrono::day;
+    using Years = std::chrono::years;
+    using Months = std::chrono::months;
+    using Days = std::chrono::days;
+    using Weaks = std::chrono::weeks;
+    using WeakDay = std::chrono::weekday;
+    using Hours = std::chrono::hours;
+    using Minutes = std::chrono::minutes;
+    using Seconds = std::chrono::seconds;
+    using Milliseconds = std::chrono::milliseconds;
+    using YearMontDay = std::chrono::year_month_day;
+    using HHMMSS = std::chrono::hh_mm_ss<Milliseconds>;
+
     using namespace std::chrono;
     namespace
     {
@@ -35,147 +50,88 @@ namespace sd
 
     Date::Date(TimePoint timePoint) { _timePoint = timePoint; }
 
-    Date::Date(long ticks) { addTicks(ticks); }
+    Date::Date(long long ticks) { add(dev::Microseconds{ticks}); }
 
-    Date::Date(int year, unsigned month, unsigned day) : Date{Year{year}, Month{month}, Day{day}} {}
+    Date::Date(int year, unsigned month, unsigned day) : Date{year, month, day, 0, 0, 0, 0} {}
     Date::Date(int year, unsigned month, unsigned day, int hour, int minute, int second)
-        : Date{Year{year}, Month{month}, Day{day}, Hours{hour}, Minutes{minute}, Seconds{second}}
+        : Date{year, month, day, hour, minute, second, 0}
     {
     }
     Date::Date(int year, unsigned month, unsigned day, int hour, int minute, int second, int milisecond)
-        : Date{Year{year},
-               Month{month},
-               Day{day},
-               Hours{hour},
-               Minutes{minute},
-               Seconds{second},
-               Milliseconds{milisecond}}
     {
+        _timePoint = createTimePoint({Year{year}, Month{month}, Day{day}},
+                                     Hours{hour} + Minutes{minute} + Seconds{second} + Milliseconds{milisecond});
     }
 
-    Date::Date(Year year, Month month, Day day) : Date{year, month, day, 0h, 0min, 0s, 0ms} {}
-    Date::Date(Year year, Month month, Day day, Hours hour, Minutes minute, Seconds second)
-        : Date{year, month, day, hour, minute, second, 0ms}
+    int Date::day() const { return unsigned{readYearMonthDay(_timePoint).day()}; }
+    int Date::month() const { return unsigned{readYearMonthDay(_timePoint).month()}; }
+    int Date::year() const { return int{readYearMonthDay(_timePoint).year()}; }
+    // WeakDay Date::dayOfWeek() const { return {sys_days{getYearMonthDay()}}; }
+
+    int Date::hour() const { return readHMMSS(_timePoint).hours().count(); }
+    int Date::minute() const { return readHMMSS(_timePoint).minutes().count(); }
+    int Date::second() const { return readHMMSS(_timePoint).seconds().count(); }
+    int Date::milisecond() const { return readHMMSS(_timePoint).subseconds().count(); }
+
+    long long Date::ticks() const
     {
+        return static_cast<long>(floor<Microseconds>(_timePoint).time_since_epoch().count());
     }
-    Date::Date(Year year, Month month, Day day, Hours hour, Minutes minute, Seconds second, Milliseconds milisecond)
+
+    Date &Date::add(const Time &time) { _timePoint += Microseconds{time.microseconds()}; }
+
+    Date &Date::substract(const Time &time) { return add(-time); }
+    Time Date::substract(const Date &time)
     {
-        _timePoint = createTimePoint({year, month, day}, hour + minute + second + milisecond);
+        auto diff = _timePoint - time._timePoint;
+        return Time{floor<Microseconds>(diff).count()};
     }
 
-    Day Date::day() const { return getYearMonthDay().day(); }
-    Month Date::month() const { return getYearMonthDay().month(); }
-    Year Date::year() const { return getYearMonthDay().year(); }
-    WeakDay Date::dayOfWeek() const { return {sys_days{getYearMonthDay()}}; }
+    Date &Date::operator+=(const Time &time) { return add(time); }
 
-    Hours Date::hour() const { return timeOfDay().hours(); }
-    Minutes Date::minute() const { return timeOfDay().minutes(); }
-    Seconds Date::second() const { return timeOfDay().seconds(); }
-    Milliseconds Date::milisecond() const { return timeOfDay().subseconds(); }
+    Date Date::operator+(const Time &time) { return Date{*this}.add(time); }
 
-    long Date::ticks() const { return static_cast<long>(floor<Microseconds>(_timePoint).time_since_epoch().count()); }
+    Date &Date::operator-=(const Time &time) { return substract(time); }
 
-    YearMontDay Date::getYearMonthDay() const { return readYearMonthDay(_timePoint); }
+    Date Date::operator-(const Time &time) { return Date{*this}.substract(time); }
+    Time Date::operator-(const Date &time) { return Date{*this}.substract(time); }
 
-    HHMMSS Date::timeOfDay() const { return readHMMSS(_timePoint); }
+    // template <class Rep, class Period> Date &add22(Duration<Rep, Period> duration)
+    // {
+    //     if constexpr (Duration<Rep, Period>::period::num < Months::period::num)
+    //     {
+    //         _timePoint += duration;
+    //     }
+    //     else
+    //     {
+    //         auto [ymd, timeOfDay] = decomposeTimePoint(_timePoint);
+    //         ymd += duration;
+    //         _timePoint = createTimePoint(ymd, timeOfDay);
+    //     }
+    //     return *this;
+    // }
 
-    Date &Date::addYears(int years) { return addYears(Years{years}); }
-    Date &Date::addMonths(int months) { return addMonths(Months{months}); }
-    Date &Date::addDays(int days) { return addDays(Days{days}); }
-    Date &Date::addHours(int hours) { return addHours(Hours{hours}); }
-    Date &Date::addMinutes(int minutes) { return addMinutes(Minutes{minutes}); }
-    Date &Date::addSeconds(int seconds) { return addSeconds(Seconds{seconds}); }
-    Date &Date::addMiliseconds(int miliseconds) { return addMiliseconds(Milliseconds{miliseconds}); }
-    Date &Date::addTicks(long ticks) { return add(Microseconds{ticks}); }
-
-    Date &Date::addYears(Years years) { return add(years); }
-    Date &Date::addMonths(Months months) { return add(months); }
-    Date &Date::addDays(Days days) { return add(days); }
-    Date &Date::addYears(Year year) { return addYears(Years{int(year)}); }
-    Date &Date::addMonths(Month month) { return addMonths(Months{unsigned(month)}); }
-    Date &Date::addDays(Day day) { return addDays(Days{unsigned(day)}); }
-    Date &Date::addHours(Hours hours) { return add(hours); }
-    Date &Date::addMinutes(Minutes minutes) { return add(minutes); }
-    Date &Date::addSeconds(Seconds seconds) { return add(seconds); }
-    Date &Date::addMiliseconds(Milliseconds miliseconds) { return add(miliseconds); }
-
-    Date &Date::operator+=(Years years) { return addYears(years); }
-    Date &Date::operator+=(Months months) { return addMonths(months); }
-    Date &Date::operator+=(Days days) { return addDays(days); }
-    Date &Date::operator+=(Year year) { return addYears(year); }
-    Date &Date::operator+=(Month month) { return addMonths(month); }
-    Date &Date::operator+=(Day day) { return addDays(day); }
-    Date &Date::operator+=(Hours hours) { return addHours(hours); }
-    Date &Date::operator+=(Minutes minutes) { return addMinutes(minutes); }
-    Date &Date::operator+=(Seconds seconds) { return addSeconds(seconds); }
-    Date &Date::operator+=(Milliseconds miliseconds) { return addMiliseconds(miliseconds); }
-
-    Date Date::operator+(Years years) { return Date{*this}.addYears(years); }
-    Date Date::operator+(Months months) { return Date{*this}.addMonths(months); }
-    Date Date::operator+(Days days) { return Date{*this}.addDays(days); }
-    Date Date::operator+(Year year) { return Date{*this}.addYears(year); }
-    Date Date::operator+(Month month) { return Date{*this}.addMonths(month); }
-    Date Date::operator+(Day day) { return Date{*this}.addDays(day); }
-    Date Date::operator+(Hours hours) { return Date{*this}.addHours(hours); }
-    Date Date::operator+(Minutes minutes) { return Date{*this}.addMinutes(minutes); }
-    Date Date::operator+(Seconds seconds) { return Date{*this}.addSeconds(seconds); }
-    Date Date::operator+(Milliseconds miliseconds) { return Date{*this}.addMiliseconds(miliseconds); }
-
-    Date &Date::substractYears(int years) { return substractYears(Years{years}); }
-    Date &Date::substractMonths(int months) { return substractMonths(Months{months}); }
-    Date &Date::substractDays(int days) { return substractDays(Days{days}); }
-    Date &Date::substractHours(int hours) { return substractHours(Hours{hours}); }
-    Date &Date::substractMinutes(int minutes) { return substractMinutes(Minutes{minutes}); }
-    Date &Date::substractSeconds(int seconds) { return substractSeconds(Seconds{seconds}); }
-    Date &Date::substractMiliseconds(int miliseconds) { return substractMiliseconds(Milliseconds{miliseconds}); }
-    Date &Date::substractTicks(long ticks) { return add(Microseconds{ticks}); }
-
-    Date &Date::substractYears(Years years) { return add(-years); }
-    Date &Date::substractMonths(Months months) { return add(-months); }
-    Date &Date::substractDays(Days days) { return add(-days); }
-    Date &Date::substractYears(Year year) { return add(Years{-int(year)}); }
-    Date &Date::substractMonths(Month month) { return add(Months{-unsigned(month)}); }
-    Date &Date::substractDays(Day day) { return add(Days{-unsigned(day)}); }
-    Date &Date::substractHours(Hours hours) { return add(-hours); }
-    Date &Date::substractMinutes(Minutes minutes) { return add(-minutes); }
-    Date &Date::substractSeconds(Seconds seconds) { return add(-seconds); }
-    Date &Date::substractMiliseconds(Milliseconds miliseconds) { return add(-miliseconds); }
-
-    Date &Date::operator-=(Years years) { return substractYears(years); }
-    Date &Date::operator-=(Months months) { return substractMonths(months); }
-    Date &Date::operator-=(Days days) { return substractDays(days); }
-    Date &Date::operator-=(Year year) { return substractYears(year); }
-    Date &Date::operator-=(Month month) { return substractMonths(month); }
-    Date &Date::operator-=(Day day) { return substractDays(day); }
-    Date &Date::operator-=(Hours hours) { return substractHours(hours); }
-    Date &Date::operator-=(Minutes minutes) { return substractMinutes(minutes); }
-    Date &Date::operator-=(Seconds seconds) { return substractSeconds(seconds); }
-    Date &Date::operator-=(Milliseconds miliseconds) { return substractMiliseconds(miliseconds); }
-
-    Date Date::operator-(Years years) { return Date{*this}.substractYears(years); }
-    Date Date::operator-(Months months) { return Date{*this}.substractMonths(months); }
-    Date Date::operator-(Days days) { return Date{*this}.substractDays(days); }
-    Date Date::operator-(Year year) { return Date{*this}.substractYears(year); }
-    Date Date::operator-(Month month) { return Date{*this}.substractMonths(month); }
-    Date Date::operator-(Day day) { return Date{*this}.substractDays(day); }
-    Date Date::operator-(Hours hours) { return Date{*this}.substractHours(hours); }
-    Date Date::operator-(Minutes minutes) { return Date{*this}.substractMinutes(minutes); }
-    Date Date::operator-(Seconds seconds) { return Date{*this}.substractSeconds(seconds); }
-    Date Date::operator-(Milliseconds miliseconds) { return Date{*this}.substractMiliseconds(miliseconds); }
-
-    template <class Rep, class Period> Date &Date::add(Duration<Rep, Period> duration)
+    namespace dev
     {
-        if constexpr (Duration<Rep, Period>::period::num < Months::period::num)
-        {
-            _timePoint += duration;
-        }
-        else
-        {
-            auto [ymd, timeOfDay] = decomposeTimePoint(_timePoint);
-            ymd += duration;
-            _timePoint = createTimePoint(ymd, timeOfDay);
-        }
-        return *this;
-    }
+        namespace ch = std::chrono;
+
+        Year::Year(int year) : ch::year{year} {}
+        Month::Month(unsigned month) : ch::month{month} {}
+        Day::Day(unsigned day) : ch::day{day} {}
+
+        Date Year::operator/(const Month &month) const { return Date{int{*this}, unsigned{month}, 1}; }
+        Date Year::operator/(const Day &day) const { return Date{int{*this}, 1, unsigned{day}}; }
+
+        Date Month::operator/(const Day &day) const { return Date{1970, unsigned{*this}, unsigned{day}}; }
+        Date Month::operator/(const Year &year) const { return Date{int{year}, unsigned{*this}, 1}; }
+
+        Date Day::operator/(const Month &month) const { return Date{1970, unsigned{month}, unsigned{*this}}; }
+        Date Day::operator/(const Year &year) const { return Date{int{year}, 1, unsigned{*this}}; }
+
+    } // namespace dev
+
+    dev::Year operator"" _y(unsigned long long year) { return dev::Year{static_cast<int>(year)}; }
+    dev::Month operator"" _m(unsigned long long month) { return dev::Month{static_cast<unsigned>(month)}; }
+    dev::Day operator"" _d(unsigned long long day) { return dev::Day{static_cast<unsigned>(day)}; }
 
 } // namespace sd

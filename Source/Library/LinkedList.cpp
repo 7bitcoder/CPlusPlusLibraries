@@ -7,8 +7,7 @@ namespace sd
 {
     namespace
     {
-        template <class T>
-        void printAll(const List<T> &list)
+        template <class T> void printAll(const List<T> &list)
         {
             auto size = list.size();
             size_t i = 0;
@@ -25,7 +24,7 @@ namespace sd
             }
             std::cout << "}" << std::endl;
         }
-    }
+    } // namespace
     void linkedMain()
     {
         List<int> list;
@@ -65,4 +64,4 @@ namespace sd
         list.clear();
         printAll(list);
     }
-}
+} // namespace sd

@@ -50,7 +50,7 @@ namespace sd
 
     Date::Date(TimePoint timePoint) { _timePoint = timePoint; }
 
-    Date::Date(long long ticks) { add(dev::Microseconds{ticks}); }
+    Date::Date(long long ticks) { add(Microseconds{ticks}); }
 
     Date::Date(int year, unsigned month, unsigned day) : Date{year, month, day, 0, 0, 0, 0} {}
     Date::Date(int year, unsigned month, unsigned day, int hour, int minute, int second)
@@ -110,28 +110,5 @@ namespace sd
     //     }
     //     return *this;
     // }
-
-    namespace dev
-    {
-        namespace ch = std::chrono;
-
-        Year::Year(int year) : ch::year{year} {}
-        Month::Month(unsigned month) : ch::month{month} {}
-        Day::Day(unsigned day) : ch::day{day} {}
-
-        Date Year::operator/(const Month &month) const { return Date{int{*this}, unsigned{month}, 1}; }
-        Date Year::operator/(const Day &day) const { return Date{int{*this}, 1, unsigned{day}}; }
-
-        Date Month::operator/(const Day &day) const { return Date{1970, unsigned{*this}, unsigned{day}}; }
-        Date Month::operator/(const Year &year) const { return Date{int{year}, unsigned{*this}, 1}; }
-
-        Date Day::operator/(const Month &month) const { return Date{1970, unsigned{month}, unsigned{*this}}; }
-        Date Day::operator/(const Year &year) const { return Date{int{year}, 1, unsigned{*this}}; }
-
-    } // namespace dev
-
-    dev::Year operator"" _y(unsigned long long year) { return dev::Year{static_cast<int>(year)}; }
-    dev::Month operator"" _m(unsigned long long month) { return dev::Month{static_cast<unsigned>(month)}; }
-    dev::Day operator"" _d(unsigned long long day) { return dev::Day{static_cast<unsigned>(day)}; }
 
 } // namespace sd

@@ -61,35 +61,4 @@ namespace sd
       private:
         // template <class Rep, class Period> Date &add(Duration<Rep, Period> duration);
     };
-
-    namespace dev
-    {
-        struct Month;
-        struct Day;
-
-        struct Year : public std::chrono::year
-        {
-            Year(int year);
-            Date operator/(const Month &month) const;
-            Date operator/(const Day &day) const;
-        };
-
-        struct Month : public std::chrono::month
-        {
-            Month(unsigned month);
-            Date operator/(const Day &day) const;
-            Date operator/(const Year &year) const;
-        };
-
-        struct Day : public std::chrono::day
-        {
-            Day(unsigned day);
-            Date operator/(const Month &month) const;
-            Date operator/(const Year &year) const;
-        };
-    } // namespace dev
-
-    dev::Year operator"" _y(unsigned long long year);
-    dev::Month operator"" _m(unsigned long long month);
-    dev::Day operator"" _d(unsigned long long day);
 } // namespace sd

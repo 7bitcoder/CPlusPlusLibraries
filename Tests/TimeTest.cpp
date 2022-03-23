@@ -202,10 +202,6 @@ TEST_F(TimeTest, FromMicrosecondsDoubleTest)
     EXPECT_EQ(time.totalMicroseconds(), 2);
 }
 
-TEST_F(TimeTest, FromMicrosecondsIntTest)
-    auto time = Time::fromMicroseconds(2);
-    EXPECT_EQ(time, (Time{0, 0, 0, 0, 0, 2}));
-    EXPECT_EQ(time.totalMicroseconds(), 2);
 #pragma endregion
 
 #pragma region StaticConstants

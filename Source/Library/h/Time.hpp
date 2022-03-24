@@ -1,7 +1,6 @@
 
 #pragma once
 #include <chrono>
-#include <stdint.h>
 
 namespace sd
 {
@@ -33,7 +32,7 @@ namespace sd
         static Time min();
         static Time zero();
 
-        static Time parse(std::string source, std::string format = "%T");
+        static Time parse(const std::string &source, const std::string &format = "%T");
 
         static Time fromDays(int days);
         static Time fromDays(double days);
@@ -71,7 +70,7 @@ namespace sd
 
         template <class T> T toDuration() const { return duration_cast<T>(_time); }
 
-        std::string toString(std::string format = "{:%T}") const;
+        std::string toString(const std::string &format = "{:%T}") const;
 
         Time &add(const Time &other);
         Time &substract(const Time &other);
@@ -86,14 +85,14 @@ namespace sd
         Time &operator*=(double factor);
         Time &operator/=(double factor);
 
-        Time operator+(const Time &other) const;
-        Time operator-(const Time &other) const;
-        Time operator*(double factor) const;
-        Time operator/(double factor) const;
-
         Time operator+() const;
         Time operator-() const;
     };
+
+    Time operator+(const Time &lhs, const Time &rhs);
+    Time operator-(const Time &lhs, const Time &rhs);
+    Time operator*(const Time &time, double factor);
+    Time operator/(const Time &time, double factor);
 
     bool operator==(const Time &lhs, const Time &rhs);
     bool operator!=(const Time &lhs, const Time &rhs);

@@ -23,8 +23,8 @@ class DatioTest : public ::testing::Test
 
 TEST_F(DatioTest, ExampleTest)
 {
-    Date date{2022, 3, 10};
+    Date date = Date::now();
 
-    auto day = date.day();
-    EXPECT_EQ(day, 10);
+    auto day = date.toString("{:L%F %T %Z}");
+    EXPECT_EQ(day, "123");
 }

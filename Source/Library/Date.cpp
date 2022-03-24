@@ -15,6 +15,7 @@ namespace sd
     using Minutes = std::chrono::minutes;
     using Seconds = std::chrono::seconds;
     using Milliseconds = std::chrono::milliseconds;
+    using Microseconds = std::chrono::microseconds;
     using YearMontDay = std::chrono::year_month_day;
     using HHMMSS = std::chrono::hh_mm_ss<Milliseconds>;
 
@@ -42,7 +43,16 @@ namespace sd
 
         HHMMSS readHMMSS(TimePoint timePoint) { return HHMMSS{floor<Milliseconds>(readTimeOfDay(timePoint))}; }
 
+        Date parseString(const std::string &source, const std::string &format)
+        {
+            Microseconds duration;
+            std::stringstream ss{source};
+            from_stream(ss, format.c_str(), duration);
+            return Date{1};
+        }
     } // namespace
+
+    Date Date::parse(const std::string &source, const std::string &format) { return parseString(source, format); }
 
     Date Date::now() { return Date{system_clock::now()}; }
     Date Date::max() { return Date{system_clock::now().max()}; }
@@ -63,38 +73,45 @@ namespace sd
                                      Hours{hour} + Minutes{minute} + Seconds{second} + Milliseconds{milisecond});
     }
 
-    int Date::day() const { return unsigned{readYearMonthDay(_timePoint).day()}; }
-    int Date::month() const { return unsigned{readYearMonthDay(_timePoint).month()}; }
-    int Date::year() const { return int{readYearMonthDay(_timePoint).year()}; }
-    // WeakDay Date::dayOfWeek() const { return {sys_days{getYearMonthDay()}}; }
+    int Date::day() const { return unsigned{readYearMonthDay(raw()).day()}; }
+    int Date::month() const { return unsigned{readYearMonthDay(raw()).month()}; }
+    int Date::year() const { return int{readYearMonthDay(raw()).year()}; }
+    int Date::hour() const { return readHMMSS(raw()).hours().count(); }
+    int Date::minute() const { return readHMMSS(raw()).minutes().count(); }
+    int Date::second() const { return readHMMSS(raw()).seconds().count(); }
+    int Date::milisecond() const { return readHMMSS(raw()).subseconds().count(); }
 
-    int Date::hour() const { return readHMMSS(_timePoint).hours().count(); }
-    int Date::minute() const { return readHMMSS(_timePoint).minutes().count(); }
-    int Date::second() const { return readHMMSS(_timePoint).seconds().count(); }
-    int Date::milisecond() const { return readHMMSS(_timePoint).subseconds().count(); }
+    long long Date::ticks() const { return 1; }
+    // static_cast<long>(floor<Microseconds>(_timePoint).time_since_epoch().count());
 
-    long long Date::ticks() const
+    TimePoint Date::raw() const { return _timePoint; }
+
+    Time Date::timeOfDay() const { return Time{duration_cast<Microseconds>(readTimeOfDay(_timePoint))}; }
+
+    std::string Date::toString(const std::string &format) const { return std::format(format, raw()); }
+
+    Date &Date::add(const Time &time)
     {
-        return static_cast<long>(floor<Microseconds>(_timePoint).time_since_epoch().count());
+        _timePoint += time.raw();
+        return *this;
     }
-
-    Date &Date::add(const Time &time) { _timePoint += Microseconds{time.microseconds()}; }
 
     Date &Date::substract(const Time &time) { return add(-time); }
-    Time Date::substract(const Date &time)
-    {
-        auto diff = _timePoint - time._timePoint;
-        return Time{floor<Microseconds>(diff).count()};
-    }
+    Time Date::substract(const Date &date) const { return Time{duration_cast<Microseconds>(raw() - date.raw())}; }
 
     Date &Date::operator+=(const Time &time) { return add(time); }
-
-    Date Date::operator+(const Time &time) { return Date{*this}.add(time); }
-
     Date &Date::operator-=(const Time &time) { return substract(time); }
 
-    Date Date::operator-(const Time &time) { return Date{*this}.substract(time); }
-    Time Date::operator-(const Date &time) { return Date{*this}.substract(time); }
+    Date operator+(const Date &date, const Time &time) { return Date{date}.add(time); }
+    Time operator-(const Date &lhs, const Date &rhs) { return Date{lhs}.substract(rhs); }
+    Date operator-(const Date &date, const Time &time) { return Date{date}.substract(time); }
+
+    bool operator==(const Date &lhs, const Date &rhs) { return lhs.raw() == rhs.raw(); }
+    bool operator!=(const Date &lhs, const Date &rhs) { return lhs.raw() != rhs.raw(); }
+    bool operator<(const Date &lhs, const Date &rhs) { return lhs.raw() < rhs.raw(); }
+    bool operator<=(const Date &lhs, const Date &rhs) { return lhs.raw() <= rhs.raw(); }
+    bool operator>(const Date &lhs, const Date &rhs) { return lhs.raw() > rhs.raw(); }
+    bool operator>=(const Date &lhs, const Date &rhs) { return lhs.raw() >= rhs.raw(); }
 
     // template <class Rep, class Period> Date &add22(Duration<Rep, Period> duration)
     // {

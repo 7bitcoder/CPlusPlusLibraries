@@ -14,6 +14,7 @@ namespace sd
         TimePoint _timePoint;
 
       public:
+        static Date parse(const std::string &source, const std::string &format = "%F %T %Z");
         static Date now();
         static Date max();
         static Date min();
@@ -34,31 +35,40 @@ namespace sd
         int year() const;
         int month() const;
         int day() const;
-        // int dayOfWeek() const;
-        // const int dayOfYear() const;
         int hour() const;
         int minute() const;
         int second() const;
         int milisecond() const;
         long long ticks() const;
+        TimePoint raw() const;
+
+        Time timeOfDay() const;
+
+        std::string toString(const std::string &format = "{:%F %T %Z}") const;
 
         Date &add(const Time &time);
 
-        Time substract(const Date &time);
+        Time substract(const Date &date) const;
         Date &substract(const Time &time);
 
         Date &operator=(const Date &other) = default;
 
         Date &operator+=(const Time &time);
-
-        Date operator+(const Time &time);
-
         Date &operator-=(const Time &time);
-
-        Time operator-(const Date &time);
-        Date operator-(const Time &time);
 
       private:
         // template <class Rep, class Period> Date &add(Duration<Rep, Period> duration);
     };
+
+    Date operator+(const Date &date, const Time &time);
+    Time operator-(const Date &lhs, const Date &rhs);
+    Date operator-(const Date &date, const Time &time);
+
+    bool operator==(const Date &lhs, const Date &rhs);
+    bool operator!=(const Date &lhs, const Date &rhs);
+    bool operator<(const Date &lhs, const Date &rhs);
+    bool operator<=(const Date &lhs, const Date &rhs);
+    bool operator>(const Date &lhs, const Date &rhs);
+    bool operator>=(const Date &lhs, const Date &rhs);
+
 } // namespace sd

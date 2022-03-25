@@ -6,22 +6,26 @@
 
 namespace sd
 {
+    using Days = std::chrono::days;
+    using Hours = std::chrono::hours;
+    using Minutes = std::chrono::minutes;
+    using Seconds = std::chrono::seconds;
+    using Milliseconds = std::chrono::milliseconds;
+    using Microseconds = std::chrono::microseconds;
+    using HHMMSS = std::chrono::hh_mm_ss<Milliseconds>;
+    template <class Rep, class Period = std::ratio<1>> using Duration = std::chrono::duration<Rep, Period>;
 
     using namespace std::chrono;
-
-#define DECOMPOSE(what)                                                                                                \
-    auto hh = decomposeHHMMSS(duration).first;                                                                         \
-    return hh.what().count() * (hh.is_negative() ? -1 : 1);
 
     namespace
     {
         template <class D> D roundToZero(Microseconds dur) { return dur < 0 ? ceil<D>(dur) : floor<D>(dur); }
 
-        template <class T, class D> auto cast(D dur) { return duration_cast<T>(dur); }
+        template <class D> auto castToMicroseconds(D dur) { return duration_cast<Microseconds>(dur); }
 
-        template <class D> Time from(int duration) { return Time{cast<Microseconds>(D{duration})}; }
-        template <class D> Time from(double duration) { return Time{cast<Microseconds>(D{1} * duration)}; }
-        template <class D> double to(Time time) { return time.toDuration<Duration<double, D::period>>().count(); }
+        template <class D> Time from(int duration) { return Time{castToMicroseconds(D{duration})}; }
+        template <class D> Time from(double duration) { return Time{castToMicroseconds(D{1} * duration)}; }
+        template <class D> double to(Time time) { return time.toChronoDuration<Duration<double, D::period>>().count(); }
 
         auto decomposeDays(Microseconds duration)
         {
@@ -33,11 +37,15 @@ namespace sd
         auto decomposeHHMMSS(Microseconds duration)
         {
             auto [days, rest] = decomposeDays(duration);
-            auto restInMili = roundToZero<Milliseconds>(rest);
-            auto restMicroseconds = rest - restInMili;
+            Milliseconds restInMili = roundToZero<Milliseconds>(rest);
+            Microseconds restMicroseconds = rest - restInMili;
             HHMMSS hh{restInMili};
             return std::make_pair(hh, restMicroseconds);
         }
+
+#define DECOMPOSE(what)                                                                                                \
+    auto hh = decomposeHHMMSS(duration).first;                                                                         \
+    return hh.what().count() * (hh.is_negative() ? -1 : 1);
 
         auto decomposeHours(Microseconds duration) { DECOMPOSE(hours); }
         auto decomposeMinutes(Microseconds duration) { DECOMPOSE(minutes); }
@@ -45,20 +53,19 @@ namespace sd
         auto decomposeMiliseconds(Microseconds duration) { DECOMPOSE(subseconds); }
         auto decomposeMicroseconds(Microseconds duration) { return decomposeHHMMSS(duration).second.count(); };
 
-        Time parseString(const std::string &source, const std::string &format)
-        {
-            Microseconds duration;
-            std::stringstream ss{source};
-            from_stream(ss, format.c_str(), duration);
-            return Time{duration};
-        }
     } // namespace
 
     Time Time::max() { return Time{Microseconds::max()}; }
     Time Time::min() { return Time{Microseconds::min()}; }
     Time Time::zero() { return Time{Microseconds::zero()}; }
 
-    Time Time::parse(const std::string &source, const std::string &format) { return parseString(source, format); }
+    Time Time::parse(const std::string &source, const std::string &format)
+    {
+        Microseconds duration;
+        std::stringstream ss{source};
+        from_stream(ss, format.c_str(), duration);
+        return Time{duration};
+    }
 
     Time Time::fromDays(int days) { return from<Days>(days); }
     Time Time::fromDays(double days) { return from<Days>(days); }
@@ -114,6 +121,8 @@ namespace sd
 
     Time Time::operator+() const { return Time{*this}; }
     Time Time::operator-() const { return Time{*this}.negate(); }
+
+    // Time::operator bool() const { return raw() != 0; }
 
     Time operator+(const Time &lhs, const Time &rhs) { return Time{lhs}.add(rhs); }
     Time operator-(const Time &lhs, const Time &rhs) { return Time{lhs}.substract(rhs); }

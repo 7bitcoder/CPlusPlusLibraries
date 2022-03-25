@@ -6,6 +6,7 @@
 #include "Date.hpp"
 
 using namespace sd;
+using namespace std::chrono;
 
 class TimeTest : public ::testing::Test
 {
@@ -88,7 +89,6 @@ TEST_F(TimeTest, CopyConstructorTest)
 
 TEST_F(TimeTest, DurationConstructorTest)
 {
-    using namespace std::chrono;
     auto duration = 1h + 1min;
     Time time{duration};
 
@@ -115,11 +115,14 @@ TEST_F(TimeTest, FromDaysDoubleTest)
 
 TEST_F(TimeTest, FromNegativeDaysDoubleTest)
 {
-    auto time = Time::fromDays(-2.2);
+    auto time = Time::fromDays(-2.6);
 
-    EXPECT_EQ(time.totalDays(), -2.2);
+    EXPECT_EQ(time.totalDays(), -2.6);
+    EXPECT_EQ(time.totalHours(), -62.4);
     EXPECT_EQ(time.days(), -2);
-    EXPECT_EQ(time.hours(), -4);
+    EXPECT_EQ(time.hours(), -14);
+    EXPECT_EQ(time.minutes(), -24);
+    EXPECT_EQ(time.seconds(), 0);
 }
 
 TEST_F(TimeTest, FromDaysIntTest)
@@ -286,7 +289,6 @@ TEST_F(TimeTest, NegativeTest)
 
 TEST_F(TimeTest, totalDaysTest)
 {
-    using namespace std::chrono;
     Time time = 48h;
 
     EXPECT_EQ(time.totalDays(), 2);
@@ -294,7 +296,6 @@ TEST_F(TimeTest, totalDaysTest)
 
 TEST_F(TimeTest, totalHoursTest)
 {
-    using namespace std::chrono;
     Time time = 48h;
 
     EXPECT_EQ(time.totalHours(), 48);
@@ -302,7 +303,6 @@ TEST_F(TimeTest, totalHoursTest)
 
 TEST_F(TimeTest, totalMinutesTest)
 {
-    using namespace std::chrono;
     Time time = 48min;
 
     EXPECT_EQ(time.totalMinutes(), 48);
@@ -310,7 +310,6 @@ TEST_F(TimeTest, totalMinutesTest)
 
 TEST_F(TimeTest, totalSecondsTest)
 {
-    using namespace std::chrono;
     Time time = 48s;
 
     EXPECT_EQ(time.totalSeconds(), 48);
@@ -318,7 +317,6 @@ TEST_F(TimeTest, totalSecondsTest)
 
 TEST_F(TimeTest, totalMilisecondsTest)
 {
-    using namespace std::chrono;
     Time time = 48ms;
 
     EXPECT_EQ(time.totalMiliseconds(), 48);
@@ -326,7 +324,6 @@ TEST_F(TimeTest, totalMilisecondsTest)
 
 TEST_F(TimeTest, totalMicrosecondsTest)
 {
-    using namespace std::chrono;
     Time time = 48_us;
 
     EXPECT_EQ(time.totalMicroseconds(), 48);
@@ -334,10 +331,9 @@ TEST_F(TimeTest, totalMicrosecondsTest)
 
 TEST_F(TimeTest, rawTest)
 {
-    using namespace std::chrono;
     Time time = 48us;
 
-    EXPECT_EQ(time.raw(), Microseconds{48});
+    EXPECT_EQ(time.raw(), 48us);
 }
 #pragma endregion
 
@@ -345,14 +341,14 @@ TEST_F(TimeTest, rawTest)
 
 TEST_F(TimeTest, UnaryAddTest)
 {
-    auto time = +Time{10000};
+    auto time = +10000_us;
 
     EXPECT_EQ(time.totalMicroseconds(), 10000);
 }
 
 TEST_F(TimeTest, UnaryNegativeTest)
 {
-    auto time = -Time{10000};
+    auto time = -10000_us;
 
     EXPECT_EQ(time.totalMicroseconds(), -10000);
 }
@@ -365,7 +361,7 @@ TEST_F(TimeTest, MethodAddTest)
 {
     Time time{10000};
 
-    time.add(Time{10000});
+    time.add(10000_us);
 
     EXPECT_EQ(time.totalMicroseconds(), 20000);
 }
@@ -374,7 +370,7 @@ TEST_F(TimeTest, MethodSubsrtactTest)
 {
     Time time{10000};
 
-    time.substract(Time{50000});
+    time.substract(50000_us);
 
     EXPECT_EQ(time.totalMicroseconds(), -40000);
 }
@@ -653,7 +649,7 @@ TEST_F(TimeTest, ToDurationTest)
 {
     Time time = 2_d + 2_h + 1_min + 1_s + 1_ms + 2_us;
 
-    EXPECT_EQ(time.toDuration<Minutes>(), (Minutes{3001}));
+    EXPECT_EQ(time.toChronoDuration<minutes>(), 3001min);
 }
 #pragma endregion
 

@@ -1,14 +1,15 @@
+#include <gtest/gtest.h>
 #include <iostream>
 #include <thread>
-#include <gtest/gtest.h>
 
 class Template : public ::testing::Test
 {
-protected:
+  protected:
     Template() {}
 
     void SetUp() override
     {
+        // GTEST_SKIP() << "Skipping all tests for this fixture";
     }
 
     void TearDown() override {}
@@ -18,7 +19,4 @@ protected:
     static void TearDownTestSuite() {}
 };
 
-TEST_F(Template, ExampleTest)
-{
-   EXPECT_TRUE(true);
-}
+TEST_F(Template, ExampleTest) { EXPECT_TRUE(true); }

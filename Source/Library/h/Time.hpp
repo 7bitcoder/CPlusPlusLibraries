@@ -4,28 +4,12 @@
 
 namespace sd
 {
-    using Year = std::chrono::year;
-    using Month = std::chrono::month;
-    using Day = std::chrono::day;
-    using Years = std::chrono::years;
-    using Months = std::chrono::months;
-    using Days = std::chrono::days;
-    using Weaks = std::chrono::weeks;
-    using WeakDay = std::chrono::weekday;
-    using Hours = std::chrono::hours;
-    using Minutes = std::chrono::minutes;
-    using Seconds = std::chrono::seconds;
-    using Milliseconds = std::chrono::milliseconds;
-    using Microseconds = std::chrono::microseconds;
-    using YearMontDay = std::chrono::year_month_day;
-    using HHMMSS = std::chrono::hh_mm_ss<Milliseconds>;
-
-    template <class Rep, class Period = std::ratio<1>> using Duration = std::chrono::duration<Rep, Period>;
 
     class Time
     {
+      public:
       private:
-        Microseconds _time;
+        std::chrono::microseconds _time;
 
       public:
         static Time max();
@@ -46,7 +30,7 @@ namespace sd
         static Time fromMiliseconds(double miliseconds);
         static Time fromMicroseconds(long long microseconds);
 
-        template <class Rep, class Period> Time(const Duration<Rep, Period> &duration) : _time{duration} {}
+        template <class Rep, class Period> Time(const std::chrono::duration<Rep, Period> &duration) : _time{duration} {}
         Time(long long microseconds);
         Time(int hour, int minute, int second);
         Time(int days, int hour, int minute, int second, int miliseconds = 0, int microseconds = 0);
@@ -66,9 +50,9 @@ namespace sd
         double totalSeconds() const;
         double totalMiliseconds() const;
         long long totalMicroseconds() const;
-        Microseconds raw() const;
+        std::chrono::microseconds raw() const;
 
-        template <class T> T toDuration() const { return duration_cast<T>(_time); }
+        template <class T> T toChronoDuration() const { return duration_cast<T>(_time); }
 
         std::string toString(const std::string &format = "{:%T}") const;
 
@@ -87,6 +71,8 @@ namespace sd
 
         Time operator+() const;
         Time operator-() const;
+
+        // operator bool() const;
     };
 
     Time operator+(const Time &lhs, const Time &rhs);

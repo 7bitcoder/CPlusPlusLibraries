@@ -55,9 +55,9 @@ namespace sd
 
     } // namespace
 
-    Time Time::max() { return Time{Microseconds::max()}; }
-    Time Time::min() { return Time{Microseconds::min()}; }
-    Time Time::zero() { return Time{Microseconds::zero()}; }
+    const Time Time::max = Time{Microseconds::max()};
+    const Time Time::min = Time{Microseconds::min()};
+    const Time Time::zero = Time{Microseconds::zero()};
 
     Time Time::parse(const std::string &source, const std::string &format)
     {

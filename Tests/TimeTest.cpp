@@ -211,21 +211,21 @@ TEST_F(TimeTest, FromMicrosecondsDoubleTest)
 
 TEST_F(TimeTest, MaxCreatorTest)
 {
-    auto time = Time::max();
+    auto time = Time::max;
 
     EXPECT_EQ(time, (Time{std::chrono::microseconds::max().count()}));
 }
 
 TEST_F(TimeTest, MinCreatorTest)
 {
-    auto time = Time::min();
+    auto time = Time::min;
 
     EXPECT_EQ(time, (Time{std::chrono::microseconds::min().count()}));
 }
 
 TEST_F(TimeTest, ZeroCreatorTest)
 {
-    auto time = Time::zero();
+    auto time = Time::zero;
 
     EXPECT_EQ(time, (Time{0}));
 }

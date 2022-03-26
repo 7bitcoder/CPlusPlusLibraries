@@ -53,12 +53,13 @@ namespace sd
         return Date{timePoint};
     }
 
+    const Date Date::max = Date{system_clock::now().max()};
+    const Date Date::min = Date{system_clock::now().min()};
+    const Date Date::unixEpoch = Date{1970, 1, 1};
+
     Date Date::now() { return Date{system_clock::now()}; }
     Date Date::utcNow() { return Date::now(); }
     Date Date::today() { return Date{Date::now().yearMonthDay()}; }
-    Date Date::max() { return Date{system_clock::now().max()}; }
-    Date Date::min() { return Date{system_clock::now().min()}; }
-    Date Date::unixEpoch() { return Date{0}; }
 
     int Date::daysInMonth(int year, int month)
     {
@@ -67,8 +68,8 @@ namespace sd
     bool Date::isLeapYear(int year) { return Date::daysInMonth(year, 2) == 29; }
 
     Date::Date(long long microseconds) { add(Microseconds{microseconds}); }
-    Date::Date(int year, unsigned month, unsigned day, int hour, int minute, int second, int milisecond)
-        : Date{{Year{year}, Month{month}, Day{day}},
+    Date::Date(int year, int month, int day, int hour, int minute, int second, int milisecond)
+        : Date{{Year{year}, Month{static_cast<unsigned>(month)}, Day{static_cast<unsigned>(day)}},
                Hours{hour} + Minutes{minute} + Seconds{second} + Milliseconds{milisecond}}
     {
     }
@@ -148,7 +149,7 @@ namespace sd
     Date &Date::operator-=(const Years &years) { return substractYears(years.value); }
     Date &Date::operator-=(const Months &months) { return substractMonths(months.value); }
 
-    Date::operator bool() const { return *this != Date::unixEpoch(); }
+    Date::operator bool() const { return *this != Date{0}; }
 
     Date operator+(const Date &date, const Time &time) { return Date{date}.add(time); }
     Date operator+(const Date &date, const Years &years) { return Date{date}.addYears(years.value); }

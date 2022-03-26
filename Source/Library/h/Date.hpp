@@ -38,18 +38,19 @@ namespace sd
       public:
         static Date parse(const std::string &source, const std::string &format = "%F %T %Z");
 
+        const static Date max;
+        const static Date min;
+        const static Date unixEpoch;
+
         static Date now();
         static Date utcNow();
         static Date today();
-        static Date max();
-        static Date min();
-        static Date unixEpoch();
 
         static int daysInMonth(int year, int month);
         static bool isLeapYear(int year);
 
         Date(long long microseconds);
-        Date(int year, unsigned month, unsigned day, int hour = 0, int minute = 0, int second = 0, int miliseconds = 0);
+        Date(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int miliseconds = 0);
         Date(std::chrono::year_month_day date, Time timeOfDay = Time{0});
 
         Date(const Date &) = default;

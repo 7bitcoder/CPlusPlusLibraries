@@ -427,7 +427,7 @@ TEST_F(DateTest, BoolOperatorTrueTest)
 
 TEST_F(DateTest, BoolOperatorFalseTest)
 {
-    Date date = Date::unixEpoch();
+    Date date = Date{0};
 
     EXPECT_FALSE(date);
 }

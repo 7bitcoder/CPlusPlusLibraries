@@ -12,9 +12,9 @@ namespace sd
         std::chrono::microseconds _time;
 
       public:
-        static Time max();
-        static Time min();
-        static Time zero();
+        const static Time max;
+        const static Time min;
+        const static Time zero;
 
         static Time parse(const std::string &source, const std::string &format = "%T");
 

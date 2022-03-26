@@ -7,6 +7,12 @@
 namespace sd
 {
 
+    enum DateKind
+    {
+        Local = 0,
+        Utc
+    };
+
     enum DayOfWeek
     {
         Monday = 1,
@@ -33,10 +39,13 @@ namespace sd
     struct Date
     {
       private:
-        std::chrono::time_point<std::chrono::system_clock> _timePoint;
+        // std::chrono::time_point<std::chrono::system_clock> _timePoint;
+        std::chrono::zoned_time<std::chrono::system_clock::duration> _zonedTime;
 
       public:
         static Date parse(const std::string &source, const std::string &format = "%F %T %Z");
+
+        static DateKind defaultDateKind;
 
         const static Date max;
         const static Date min;

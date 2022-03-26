@@ -16,6 +16,7 @@ namespace sd
     using Microseconds = std::chrono::microseconds;
     using YearMonthDay = std::chrono::year_month_day;
     using YearMonthWeekday = std::chrono::year_month_weekday;
+    using ZonedTime = std::chrono::zoned_time<std::chrono::system_clock::duration>;
 
     using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
     using TimePointDays = std::chrono::time_point<std::chrono::system_clock, std::chrono::days>;
@@ -23,15 +24,33 @@ namespace sd
     using namespace std::chrono;
     namespace
     {
+
         template <class D> auto castToMicroseconds(D dur) { return duration_cast<Microseconds>(dur); }
 
-        TimePointDays toTotalDays(TimePoint timePoint) { return floor<CDays>(timePoint); }
+        auto getOffset(DateKind dateKind){return dateKind == DateKind::Local ? }
+
+        TimePointDays toTotalDays(TimePoint timePoint, DateKind dateKind)
+        {
+            return floor<CDays>(timePoint);
+        }
 
         TimePoint createTimePoint(YearMonthDay ymd, Time dayTime)
         {
             if (!ymd.ok())
                 ymd = ymd.year() / ymd.month() / last;
             return sys_days{ymd} + dayTime.raw();
+        }
+
+        ZonedTime createZonedTime(YearMonthDay ymd, Time dayTime, DateKind dateKind = Date::defaultDateKind)
+        {
+            auto timepoint = createTimePoint(ymd, dayTime);
+            auto curr = get_tzdb().current_zone();
+            if (dateKind == DateKind::Local)
+            {
+                auto info = curr->get_info(timepoint);
+                timepoint = timepoint - info.offset;
+            }
+            return ZonedTime{curr, timepoint};
         }
 
         auto decomposeTimePoint(TimePoint timePoint)
@@ -52,6 +71,8 @@ namespace sd
         from_stream(ss, format.c_str(), timePoint);
         return Date{timePoint};
     }
+
+    DateKind Date::defaultDateKind = DateKind::Local;
 
     const Date Date::max = Date{system_clock::now().max()};
     const Date Date::min = Date{system_clock::now().min()};
@@ -74,7 +95,23 @@ namespace sd
     {
     }
     Date::Date(YearMonthDay date, Time timeOfDay) : Date{createTimePoint(date, timeOfDay)} {}
-    Date::Date(TimePoint timePoint) { _timePoint = timePoint; }
+    Date::Date(TimePoint timePoint)
+    {
+        _timePoint = timePoint;
+        auto curr = get_tzdb().current_zone();
+        _zonedTime = {curr, timePoint};
+
+        auto s = _zonedTime.get_sys_time();
+        auto l = _zonedTime.get_local_time();
+
+        auto zzz = _zonedTime.get_info();
+        auto [begin, end, offset, save, abbrev] = zzz;
+        auto gg = decomposeTimePoint(s);
+        auto t1 = std::chrono::hh_mm_ss{gg.second};
+        auto gg2 = decomposeTimePoint(_timePoint);
+        auto t2 = std::chrono::hh_mm_ss{gg2.second};
+        auto hh = 10;
+    }
 
     int Date::year() const { return int{yearMonthDay().year()}; }
     int Date::day() const { return unsigned{yearMonthDay().day()}; }
@@ -90,6 +127,7 @@ namespace sd
     DayOfWeek Date::dayOfWeek() const { return static_cast<DayOfWeek>(YMWD(raw()).weekday().iso_encoding()); }
     int Date::dayOfYear() const
     {
+        // todo optimize this code
         int result = 0, y = year(), m = month();
         for (int i = 1; i < m; ++i)
         {

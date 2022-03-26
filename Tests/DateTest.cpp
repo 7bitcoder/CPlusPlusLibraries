@@ -823,7 +823,9 @@ TEST_F(DateTest, ToStringNowTest)
 {
     Date date = Date::now();
 
-    // EXPECT_EQ(date.toString(), std::string{"09:19"});
+    auto gg = date.toString();
+
+    EXPECT_EQ(gg, std::string{"09:19"});
 }
 
 #pragma endregion

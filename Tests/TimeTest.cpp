@@ -500,9 +500,11 @@ TEST_F(TimeTest, DayLiteralTest)
 
 TEST_F(TimeTest, DayLiteralDoubleTest)
 {
-    Time time = 2.2_d;
+    Time time = 2.5_d;
 
-    EXPECT_EQ(time.totalDays(), 2.2);
+    EXPECT_EQ(time.totalDays(), 2.5);
+    EXPECT_EQ(time.days(), 2);
+    EXPECT_EQ(time.hours(), 12);
 }
 
 TEST_F(TimeTest, HourLiteralTest)

@@ -7,6 +7,17 @@
 namespace sd
 {
 
+    enum DayOfWeek
+    {
+        Monday = 1,
+        Tuesday,
+        Wednesday,
+        Thursday,
+        Friday,
+        Saturday,
+        Sunday,
+    };
+
     struct Years
     {
         int value;
@@ -26,10 +37,16 @@ namespace sd
 
       public:
         static Date parse(const std::string &source, const std::string &format = "%F %T %Z");
+
         static Date now();
+        static Date utcNow();
+        static Date today();
         static Date max();
         static Date min();
-        static Date today();
+        static Date unixEpoch();
+
+        static int daysInMonth(int year, int month);
+        static bool isLeapYear(int year);
 
         Date(long long microseconds);
         Date(int year, unsigned month, unsigned day, int hour = 0, int minute = 0, int second = 0, int miliseconds = 0);
@@ -50,12 +67,18 @@ namespace sd
         int milisecond() const;
         long long microsecond() const;
 
-        std::chrono::time_point<std::chrono::system_clock> raw() const;
+        Time timeOfDay() const;
+        int weekOfMonth() const;
+        DayOfWeek dayOfWeek() const;
+        int dayOfYear() const;
 
         std::chrono::year_month_day yearMonthDay() const;
-        Time timeOfDay() const;
+
+        std::chrono::time_point<std::chrono::system_clock> raw() const;
 
         std::string toString(const std::string &format = "{:%F %T %Z}") const;
+
+        // bool isDaylightSavingTime();
 
         Date &add(const Time &time);
         Date &addYears(int years);
@@ -87,6 +110,8 @@ namespace sd
         Date &operator-=(const Time &time);
         Date &operator-=(const Years &years);
         Date &operator-=(const Months &months);
+
+        operator bool() const;
     };
 
     Date operator+(const Date &date, const Time &time);

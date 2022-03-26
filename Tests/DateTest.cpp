@@ -99,6 +99,20 @@ TEST_F(DateTest, SpecialConstructorTest)
 
 #pragma endregion
 
+#pragma region StaticFunctions
+
+TEST_F(DateTest, DaysInMonthSimpleTest) { EXPECT_EQ(Date::daysInMonth(2022, 1), 31); }
+
+TEST_F(DateTest, DaysInMonthFebruaryInLeapYearTest) { EXPECT_EQ(Date::daysInMonth(2024, 2), 29); }
+
+TEST_F(DateTest, DaysInMonthFebruaryInNotLeapYearTest) { EXPECT_EQ(Date::daysInMonth(2022, 2), 28); }
+
+TEST_F(DateTest, InLeapYearTest) { EXPECT_TRUE(Date::isLeapYear(2024)); }
+
+TEST_F(DateTest, InNotLeapYearTest) { EXPECT_FALSE(Date::isLeapYear(2022)); }
+
+#pragma endregion
+
 #pragma region Accessors
 
 TEST_F(DateTest, YearAccessorTest)
@@ -169,6 +183,47 @@ TEST_F(DateTest, TimeOfDayAccessorTest)
     Date date{2011y / January / 12, 6_h + 19_min + 11_s + 13_ms + 20_us};
 
     EXPECT_EQ(date.timeOfDay(), (Time{0, 6, 19, 11, 13, 20}));
+}
+
+TEST_F(DateTest, WeekOfMonthAccessorTest)
+{
+    Date date{2022y / March / 26, 6_h + 19_min + 11_s + 13_ms + 20_us};
+
+    EXPECT_EQ(date.weekOfMonth(), 4);
+}
+
+TEST_F(DateTest, WeekOfYearAccessorTest)
+{
+    Date date{2024y / December / 12, 6_h + 19_min + 11_s + 13_ms + 20_us};
+
+    // EXPECT_EQ(date.weekOfYear(), 50);
+}
+
+TEST_F(DateTest, DayOfWeakAccessorTest)
+{
+    Date date{2022y / March / 26, 6_h + 19_min + 11_s + 13_ms + 20_us};
+
+    EXPECT_EQ(date.dayOfWeek(), DayOfWeek::Saturday);
+}
+
+TEST_F(DateTest, DayOfYearAccessorSimpleTest)
+{
+    Date date{2022y / January / 12, 6_h + 19_min + 11_s + 13_ms + 20_us};
+
+    Date yy{2022, 1, 0};
+
+    auto res = date - yy;
+
+    auto hh = res.totalDays();
+
+    EXPECT_EQ(date.dayOfYear(), 12);
+}
+
+TEST_F(DateTest, DayOfYearAccessorComplexTest)
+{
+    Date date{2024y / December / 12, 6_h + 19_min + 11_s + 13_ms + 20_us};
+
+    EXPECT_EQ(date.dayOfYear(), 347);
 }
 
 #pragma endregion
@@ -362,6 +417,20 @@ TEST_F(DateTest, SubstractMethodMicrosecondsTest)
 #pragma endregion
 
 #pragma region AssignOperators
+
+TEST_F(DateTest, BoolOperatorTrueTest)
+{
+    Date date{2011y / January / 12, 6_h + 19_min + 11_s + 13_ms + 20_us};
+
+    EXPECT_TRUE(date);
+}
+
+TEST_F(DateTest, BoolOperatorFalseTest)
+{
+    Date date = Date::unixEpoch();
+
+    EXPECT_FALSE(date);
+}
 
 TEST_F(DateTest, AssignTest)
 {
@@ -729,6 +798,13 @@ TEST_F(DateTest, ToStringDefaultTest)
     EXPECT_EQ(date.toString(), std::string{"2011-01-12 09:19:11.0130200 UTC"});
 }
 
+TEST_F(DateTest, ToStringVariant1Test)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
+
+    EXPECT_EQ(date.toString("{:%D %T %Z}"), std::string{"01/12/11 09:19:11.0130200 UTC"});
+}
+
 TEST_F(DateTest, ToStringMicrosecondsTest)
 {
     Date date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
@@ -741,6 +817,13 @@ TEST_F(DateTest, ToStringHoursAndMinutesTest)
     Date date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
 
     EXPECT_EQ(date.toString("{:%R}"), std::string{"09:19"});
+}
+
+TEST_F(DateTest, ToStringNowTest)
+{
+    Date date = Date::now();
+
+    // EXPECT_EQ(date.toString(), std::string{"09:19"});
 }
 
 #pragma endregion
@@ -756,7 +839,7 @@ TEST_F(DateTest, ParseDefaultTest)
 
 TEST_F(DateTest, ParseHoursAndMinutesTest)
 {
-    Date date = Date::parse("12/01/2011 09:19:11.0130200 UTC", "%D %T %Z");
+    Date date = Date::parse("01/12/11 09:19:11.0130200 UTC", "%D %T %Z");
 
     EXPECT_EQ(date, (Date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us}));
 }
@@ -765,7 +848,7 @@ TEST_F(DateTest, ParseHoursAndMinutesDefaultTest)
 {
     Date date = Date::parse("2011/01/12 09:19:11.0130200 UTC", "");
 
-    EXPECT_EQ(date, (Date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us}));
+    EXPECT_EQ(date, (Date{0}));
 }
 
 #pragma endregion

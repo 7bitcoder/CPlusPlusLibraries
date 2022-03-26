@@ -1,4 +1,5 @@
 #include "Date.hpp"
+#include <chrono>
 
 namespace sd
 {
@@ -13,7 +14,8 @@ namespace sd
     using Seconds = std::chrono::seconds;
     using Milliseconds = std::chrono::milliseconds;
     using Microseconds = std::chrono::microseconds;
-    using YearMontDay = std::chrono::year_month_day;
+    using YearMonthDay = std::chrono::year_month_day;
+    using YearMonthWeekday = std::chrono::year_month_weekday;
 
     using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
     using TimePointDays = std::chrono::time_point<std::chrono::system_clock, std::chrono::days>;
@@ -25,7 +27,7 @@ namespace sd
 
         TimePointDays toTotalDays(TimePoint timePoint) { return floor<CDays>(timePoint); }
 
-        TimePoint createTimePoint(YearMontDay ymd, Time dayTime)
+        TimePoint createTimePoint(YearMonthDay ymd, Time dayTime)
         {
             if (!ymd.ok())
                 ymd = ymd.year() / ymd.month() / last;
@@ -36,8 +38,10 @@ namespace sd
         {
             auto days = toTotalDays(timePoint);
             Microseconds rest = castToMicroseconds(timePoint - days);
-            return std::make_pair(YearMontDay{days}, rest);
+            return std::make_pair(YearMonthDay{days}, rest);
         }
+
+        auto YMWD(TimePoint timePoint) { return YearMonthWeekday{toTotalDays(timePoint)}; }
 
     } // namespace
 
@@ -50,9 +54,17 @@ namespace sd
     }
 
     Date Date::now() { return Date{system_clock::now()}; }
+    Date Date::utcNow() { return Date::now(); }
+    Date Date::today() { return Date{Date::now().yearMonthDay()}; }
     Date Date::max() { return Date{system_clock::now().max()}; }
     Date Date::min() { return Date{system_clock::now().min()}; }
-    Date Date::today() { return Date{Date::now().yearMonthDay(), 0}; }
+    Date Date::unixEpoch() { return Date{0}; }
+
+    int Date::daysInMonth(int year, int month)
+    {
+        return Date{{Year{year} / Month{static_cast<unsigned>(month)} / last}}.day();
+    }
+    bool Date::isLeapYear(int year) { return Date::daysInMonth(year, 2) == 29; }
 
     Date::Date(long long microseconds) { add(Microseconds{microseconds}); }
     Date::Date(int year, unsigned month, unsigned day, int hour, int minute, int second, int milisecond)
@@ -60,7 +72,7 @@ namespace sd
                Hours{hour} + Minutes{minute} + Seconds{second} + Milliseconds{milisecond}}
     {
     }
-    Date::Date(std::chrono::year_month_day date, Time timeOfDay) : Date{createTimePoint(date, timeOfDay)} {}
+    Date::Date(YearMonthDay date, Time timeOfDay) : Date{createTimePoint(date, timeOfDay)} {}
     Date::Date(TimePoint timePoint) { _timePoint = timePoint; }
 
     int Date::year() const { return int{yearMonthDay().year()}; }
@@ -72,11 +84,22 @@ namespace sd
     int Date::milisecond() const { return timeOfDay().miliseconds(); }
     long long Date::microsecond() const { return timeOfDay().microseconds(); }
 
-    TimePoint Date::raw() const { return _timePoint; }
-
-    YearMontDay Date::yearMonthDay() const { return decomposeTimePoint(raw()).first; }
-
     Time Date::timeOfDay() const { return Time{decomposeTimePoint(raw()).second}; }
+    int Date::weekOfMonth() const { return YMWD(raw()).weekday_indexed().index(); }
+    DayOfWeek Date::dayOfWeek() const { return static_cast<DayOfWeek>(YMWD(raw()).weekday().iso_encoding()); }
+    int Date::dayOfYear() const
+    {
+        int result = 0, y = year(), m = month();
+        for (int i = 1; i < m; ++i)
+        {
+            result += Date::daysInMonth(y, i);
+        }
+        return result + day();
+    }
+
+    YearMonthDay Date::yearMonthDay() const { return decomposeTimePoint(raw()).first; }
+
+    TimePoint Date::raw() const { return _timePoint; }
 
     std::string Date::toString(const std::string &format) const { return std::format(format, raw()); }
 
@@ -124,6 +147,8 @@ namespace sd
     Date &Date::operator-=(const Time &time) { return substract(time); }
     Date &Date::operator-=(const Years &years) { return substractYears(years.value); }
     Date &Date::operator-=(const Months &months) { return substractMonths(months.value); }
+
+    Date::operator bool() const { return *this != Date::unixEpoch(); }
 
     Date operator+(const Date &date, const Time &time) { return Date{date}.add(time); }
     Date operator+(const Date &date, const Years &years) { return Date{date}.addYears(years.value); }

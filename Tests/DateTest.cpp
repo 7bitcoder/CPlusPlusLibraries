@@ -724,11 +724,29 @@ TEST_F(DateTest, EqualsTest)
     EXPECT_EQ(date1, date2);
 }
 
+TEST_F(DateTest, EqualsDifferentTimeZonesTest)
+{
+    Date date1{2011y / January / 12, 10_h + 19_min + 11_s + 13_ms + 20_us, "CET"};
+
+    Date date2{2011y / January / 12, Time{0, 9, 19, 11, 13, 20}, "UTC"};
+
+    EXPECT_EQ(date1, date2);
+}
+
 TEST_F(DateTest, NotEqualsTest)
 {
     Date date1{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
 
     Date date2{2010y / February / 12, Time{0, 9, 19, 11, 13, 20}};
+
+    EXPECT_NE(date1, date2);
+}
+
+TEST_F(DateTest, NotEqualsDifferentTimeZonesTest)
+{
+    Date date1{2011y / January / 12, 11_h + 19_min + 11_s + 13_ms + 20_us, "CET"};
+
+    Date date2{2011y / January / 12, Time{0, 9, 19, 11, 13, 20}, "UTC"};
 
     EXPECT_NE(date1, date2);
 }
@@ -742,11 +760,29 @@ TEST_F(DateTest, GraterTest)
     EXPECT_GT(date1, date2);
 }
 
+TEST_F(DateTest, GraterDifferentTimeZonesTest)
+{
+    Date date1{2011y / January / 12, 11_h + 19_min + 11_s + 13_ms + 20_us, "CET"};
+
+    Date date2{2011y / January / 12, Time{0, 9, 19, 11, 13, 20}, "UTC"};
+
+    EXPECT_GT(date1, date2);
+}
+
 TEST_F(DateTest, GraterOrEqualTest)
 {
     Date date1{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
 
     Date date2{2010y / February / 12, Time{0, 9, 19, 11, 13, 20}};
+
+    EXPECT_GE(date1, date2);
+}
+
+TEST_F(DateTest, GraterOrEqualDifferentTimeZonesTest)
+{
+    Date date1{2011y / January / 12, 11_h + 19_min + 11_s + 13_ms + 20_us, "CET"};
+
+    Date date2{2011y / January / 12, Time{0, 9, 19, 11, 13, 20}, "UTC"};
 
     EXPECT_GE(date1, date2);
 }
@@ -760,11 +796,29 @@ TEST_F(DateTest, LessTest)
     EXPECT_LT(date1, date2);
 }
 
+TEST_F(DateTest, LessDifferentTimeZonesTest)
+{
+    Date date1{2011y / January / 12, 5_h + 19_min + 11_s + 13_ms + 20_us, "CET"};
+
+    Date date2{2011y / January / 12, Time{0, 9, 19, 11, 13, 20}, "UTC"};
+
+    EXPECT_LT(date1, date2);
+}
+
 TEST_F(DateTest, LessOrEqualTest)
 {
     Date date1{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
 
     Date date2{2013y / February / 12, Time{0, 9, 19, 11, 13, 20}};
+
+    EXPECT_LE(date1, date2);
+}
+
+TEST_F(DateTest, LessOrEqualDifferentTimeZonesTest)
+{
+    Date date1{2011y / January / 12, 5_h + 19_min + 11_s + 13_ms + 20_us, "CET"};
+
+    Date date2{2011y / January / 12, Time{0, 9, 19, 11, 13, 20}, "UTC"};
 
     EXPECT_LE(date1, date2);
 }
@@ -848,14 +902,17 @@ TEST_F(DateTest, isDaylightSavingTimeFalseTest)
 
 TEST_F(DateTest, ParseDefaultTest)
 {
-    Date date = Date::parse("2011-01-12 09:19:11.0130200 UTC");
+    Date date = Date::parse("2011-01-12 09:19:11.0130200 CET");
 
-    EXPECT_EQ(date, (Date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us}));
+    auto hrs = date.timeOfDay().totalHours();
+    auto dat = Date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
+    auto hrs2 = dat.timeOfDay().totalHours();
+    EXPECT_EQ(date, dat);
 }
 
 TEST_F(DateTest, ParseHoursAndMinutesTest)
 {
-    Date date = Date::parse("01/12/11 09:19:11.0130200 UTC", "%D %T %Z");
+    Date date = Date::parse("01/12/11 09:19:11.0130200 CET", "%D %T %Z");
 
     EXPECT_EQ(date, (Date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us}));
 }
@@ -874,7 +931,7 @@ TEST_F(DateTest, TryParseHoursAndMinutesSuccessTest)
 {
     Date date{0};
 
-    EXPECT_TRUE(Date::tryParse(date, "2011-01-12 09:19:11.0130200 UTC"));
+    EXPECT_TRUE(Date::tryParse(date, "2011-01-12 09:19:11.0130200 CET"));
     EXPECT_EQ(date, (Date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us}));
 }
 

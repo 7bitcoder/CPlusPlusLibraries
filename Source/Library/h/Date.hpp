@@ -34,7 +34,7 @@ namespace sd
     {
       private:
         std::chrono::time_point<std::chrono::system_clock> _timePoint;
-        const std::chrono::time_zone *_timeZone;
+        const std::chrono::time_zone *_timeZone = nullptr;
 
       public:
         static const std::chrono::time_zone *defaultTimeZone;
@@ -42,9 +42,9 @@ namespace sd
         static Date parse(const std::string &source, const std::string &format = "%F %T %Z");
         static bool tryParse(Date &date, const std::string &source, const std::string &format = "%F %T %Z");
 
-        const static Date max;
-        const static Date min;
-        const static Date unixEpoch;
+        static Date max();
+        static Date min();
+        static Date unixEpoch();
 
         static Date now();
         static Date nowInUtcTimeZone();
@@ -69,7 +69,7 @@ namespace sd
         Date(std::chrono::time_point<std::chrono::system_clock> timePoint, const std::string &timeZoneName,
              bool normalize = true);
         Date(std::chrono::time_point<std::chrono::system_clock> timePoint,
-             const std::chrono::time_zone *timeZone = nullptr, bool normalize = true);
+             const std::chrono::time_zone *timeZone = nullptr, bool normalize = false);
 
       public:
         int year() const;

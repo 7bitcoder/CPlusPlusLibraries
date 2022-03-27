@@ -32,11 +32,6 @@ namespace sd
 
     struct Date
     {
-      private:
-        std::chrono::time_point<std::chrono::system_clock> _timePoint;
-        std::chrono::seconds _offset{0};
-        const std::chrono::time_zone *_timeZone{nullptr};
-
       public:
         static const std::chrono::time_zone *defaultTimeZone;
 
@@ -66,13 +61,6 @@ namespace sd
 
         Date(const Date &) = default;
 
-      private:
-        Date(std::chrono::time_point<std::chrono::system_clock> timePoint, const std::string &timeZoneName,
-             bool normalize = true);
-        Date(std::chrono::time_point<std::chrono::system_clock> timePoint,
-             const std::chrono::time_zone *timeZone = nullptr, bool normalize = false);
-
-      public:
         int year() const;
         int month() const;
         int day() const;
@@ -89,10 +77,10 @@ namespace sd
 
         std::chrono::year_month_day yearMonthDay() const;
 
-        std::chrono::time_point<std::chrono::system_clock> timePoint() const;
-        std::chrono::time_point<std::chrono::system_clock> zonedTimePoint() const;
         std::chrono::seconds offset() const;
         const std::chrono::time_zone *timeZone() const;
+        std::chrono::time_point<std::chrono::system_clock> timePoint() const;
+        std::chrono::time_point<std::chrono::system_clock> zonedTimePoint() const;
 
         std::string toString(const std::string &format = "{:L%F %T %Z}") const;
 
@@ -144,8 +132,17 @@ namespace sd
         operator bool() const;
 
       private:
+        Date(std::chrono::time_point<std::chrono::system_clock> timePoint, const std::string &timeZoneName,
+             bool normalize = true);
+        Date(std::chrono::time_point<std::chrono::system_clock> timePoint,
+             const std::chrono::time_zone *timeZone = nullptr, bool normalize = false);
+
         template <class Rep, class Period> Date &add(std::chrono::duration<Rep, Period> duration);
         void recomputeOffset();
+
+        std::chrono::time_point<std::chrono::system_clock> _timePoint;
+        std::chrono::seconds _offset{0};
+        const std::chrono::time_zone *_timeZone{nullptr};
     };
 
     Date operator+(const Date &date, const Time &time);

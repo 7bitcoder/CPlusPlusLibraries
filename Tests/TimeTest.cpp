@@ -651,7 +651,7 @@ TEST_F(TimeTest, ToDurationTest)
 {
     Time time = 2_d + 2_h + 1_min + 1_s + 1_ms + 2_us;
 
-    EXPECT_EQ(time.toChronoDuration<minutes>(), 3001min);
+    EXPECT_EQ(time.toDuration<minutes>(), 3001min);
 }
 #pragma endregion
 

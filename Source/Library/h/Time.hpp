@@ -8,10 +8,6 @@ namespace sd
     class Time
     {
       public:
-      private:
-        std::chrono::microseconds _time;
-
-      public:
         const static Time max;
         const static Time min;
         const static Time zero;
@@ -52,7 +48,7 @@ namespace sd
         long long totalMicroseconds() const;
         std::chrono::microseconds raw() const;
 
-        template <class T> T toChronoDuration() const { return duration_cast<T>(_time); }
+        template <class T> T toDuration() const { return duration_cast<T>(_time); }
 
         std::string toString(const std::string &format = "{:%T}") const;
 
@@ -72,7 +68,8 @@ namespace sd
         Time operator+() const;
         Time operator-() const;
 
-        // operator bool() const;
+      private:
+        std::chrono::microseconds _time;
     };
 
     Time operator+(const Time &lhs, const Time &rhs);

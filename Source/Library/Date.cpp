@@ -18,7 +18,7 @@ namespace sd
     using YearMonthWeekday = std::chrono::year_month_weekday;
     using ZT = std::chrono::zoned_time<std::chrono::system_clock::duration>;
     using TimeZonePtr = const std::chrono::time_zone *;
-    template <class Rep, class Period = std::ratio<1>> using Duration = std::chrono::duration<Rep, Period>;
+    template <class Rep, class Period = std::ratio<1>> using Dur = std::chrono::duration<Rep, Period>;
 
     using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
     using TimePointDays = std::chrono::time_point<std::chrono::system_clock, std::chrono::days>;
@@ -209,9 +209,9 @@ namespace sd
     Date &Date::addYears(int years) { return add(CYears{years}); }
     Date &Date::addMonths(int months) { return add(CMonths{months}); }
 
-    template <class Rep, class Period> Date &Date::add(Duration<Rep, Period> duration)
+    template <class Rep, class Period> Date &Date::add(Dur<Rep, Period> duration)
     {
-        if constexpr (Duration<Rep, Period>::period::num < CMonths::period::num)
+        if constexpr (Dur<Rep, Period>::period::num < CMonths::period::num)
         {
             _timePoint += duration;
         }

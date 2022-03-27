@@ -13,7 +13,7 @@ namespace sd
     using Milliseconds = std::chrono::milliseconds;
     using Microseconds = std::chrono::microseconds;
     using HHMMSS = std::chrono::hh_mm_ss<Milliseconds>;
-    template <class Rep, class Period = std::ratio<1>> using Duration = std::chrono::duration<Rep, Period>;
+    template <class Rep, class Period> using Dur = std::chrono::duration<Rep, Period>;
 
     using namespace std::chrono;
 
@@ -25,7 +25,7 @@ namespace sd
 
         template <class D> Time from(int duration) { return Time{castToMicroseconds(D{duration})}; }
         template <class D> Time from(double duration) { return Time{castToMicroseconds(D{1} * duration)}; }
-        template <class D> double to(Time time) { return time.toChronoDuration<Duration<double, D::period>>().count(); }
+        template <class D> double to(Time time) { return time.toDuration<Dur<double, typename D::period>>().count(); }
 
         auto decomposeDays(Microseconds duration)
         {

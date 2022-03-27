@@ -795,21 +795,21 @@ TEST_F(DateTest, ToStringDefaultTest)
 {
     Date date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
 
-    EXPECT_EQ(date.toString(), std::string{"2011-01-12 09:19:11.0130200 UTC"});
+    EXPECT_EQ(date.toString(), std::string{"2011-01-12 09:19:11.0130200 CET"});
 }
 
 TEST_F(DateTest, ToStringVariant1Test)
 {
     Date date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
 
-    EXPECT_EQ(date.toString("{:%D %T %Z}"), std::string{"01/12/11 09:19:11.0130200 UTC"});
+    EXPECT_EQ(date.toString("{:%D %T %Z}"), std::string{"01/12/11 09:19:11.0130200 CET"});
 }
 
 TEST_F(DateTest, ToStringMicrosecondsTest)
 {
     Date date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
 
-    EXPECT_EQ(date.toString("{}"), std::string{"2011-01-12 09:19:11.0130200"});
+    EXPECT_EQ(date.toString("{}"), std::string{"2011-01-12 09:19:11.0130200 CET"});
 }
 
 TEST_F(DateTest, ToStringHoursAndMinutesTest)
@@ -825,7 +825,21 @@ TEST_F(DateTest, ToStringNowTest)
 
     auto gg = date.toString();
 
-    EXPECT_EQ(gg, std::string{"09:19"});
+    EXPECT_TRUE(!gg.empty());
+}
+
+TEST_F(DateTest, isDaylightSavingTimeTrueTest)
+{
+    Date date{2022, 3, 27, 18, 14, 12};
+
+    EXPECT_TRUE(date.isDaylightSavingTime());
+}
+
+TEST_F(DateTest, isDaylightSavingTimeFalseTest)
+{
+    Date date{2022, 3, 26, 18, 14, 12};
+
+    EXPECT_FALSE(date.isDaylightSavingTime());
 }
 
 #pragma endregion
@@ -846,11 +860,22 @@ TEST_F(DateTest, ParseHoursAndMinutesTest)
     EXPECT_EQ(date, (Date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us}));
 }
 
-TEST_F(DateTest, ParseHoursAndMinutesDefaultTest)
+TEST_F(DateTest, TryParseHoursAndMinutesFailTest)
 {
-    Date date = Date::parse("2011/01/12 09:19:11.0130200 UTC", "");
+    Date date{0};
 
-    EXPECT_EQ(date, (Date{0}));
+    EXPECT_FALSE(Date::tryParse(date, "2011/01/12 09:19:11.0130200 UTC", ""));
+    EXPECT_FALSE(Date::tryParse(date, "09:19:11.0130200 UTC"));
+    EXPECT_FALSE(Date::tryParse(date, "09:19:0130200 UTC"));
+    EXPECT_FALSE(Date::tryParse(date, "2011/01/12|09:19:11.0130200 UTC"));
+}
+
+TEST_F(DateTest, TryParseHoursAndMinutesSuccessTest)
+{
+    Date date{0};
+
+    EXPECT_TRUE(Date::tryParse(date, "2011-01-12 09:19:11.0130200 UTC"));
+    EXPECT_EQ(date, (Date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us}));
 }
 
 #pragma endregion

@@ -7,12 +7,6 @@
 namespace sd
 {
 
-    enum DateKind
-    {
-        Local = 0,
-        Utc
-    };
-
     enum DayOfWeek
     {
         Monday = 1,
@@ -39,33 +33,43 @@ namespace sd
     struct Date
     {
       private:
-        // std::chrono::time_point<std::chrono::system_clock> _timePoint;
-        std::chrono::zoned_time<std::chrono::system_clock::duration> _zonedTime;
+        std::chrono::time_point<std::chrono::system_clock> _timePoint;
+        const std::chrono::time_zone *_timeZone;
 
       public:
-        static Date parse(const std::string &source, const std::string &format = "%F %T %Z");
+        static const std::chrono::time_zone *defaultTimeZone;
 
-        static DateKind defaultDateKind;
+        static Date parse(const std::string &source, const std::string &format = "%F %T %Z");
+        static bool tryParse(Date &date, const std::string &source, const std::string &format = "%F %T %Z");
 
         const static Date max;
         const static Date min;
         const static Date unixEpoch;
 
         static Date now();
-        static Date utcNow();
+        static Date nowInUtcTimeZone();
+        static Date nowInTimeZone(const std::string &timeZoneName);
         static Date today();
 
         static int daysInMonth(int year, int month);
         static bool isLeapYear(int year);
 
-        Date(long long microseconds);
-        Date(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int miliseconds = 0);
-        Date(std::chrono::year_month_day date, Time timeOfDay = Time{0});
+        Date(long long microseconds, const std::string &timeZoneName = "");
+        Date(int year, int month, int day, const std::string &timeZoneName = "");
+        Date(int year, int month, int day, int hour, int minute = 0, int second = 0, int miliseconds = 0,
+             const std::string &timeZoneName = "");
+        Date(int year, int month, int day, int hour, int minute, int second, int miliseconds,
+             const std::chrono::time_zone *timeZone);
+        Date(std::chrono::year_month_day date, Time timeOfDay = Time{0}, const std::string &timeZoneName = "");
+        Date(std::chrono::year_month_day date, Time timeOfDay, const std::chrono::time_zone *timeZone);
 
         Date(const Date &) = default;
 
       private:
-        Date(std::chrono::time_point<std::chrono::system_clock> timePoint);
+        Date(std::chrono::time_point<std::chrono::system_clock> timePoint, const std::string &timeZoneName,
+             bool normalize = true);
+        Date(std::chrono::time_point<std::chrono::system_clock> timePoint,
+             const std::chrono::time_zone *timeZone = nullptr, bool normalize = true);
 
       public:
         int year() const;
@@ -84,11 +88,24 @@ namespace sd
 
         std::chrono::year_month_day yearMonthDay() const;
 
-        std::chrono::time_point<std::chrono::system_clock> raw() const;
+        std::chrono::time_point<std::chrono::system_clock> timePoint() const;
+        const std::chrono::time_zone *timeZone() const;
 
-        std::string toString(const std::string &format = "{:%F %T %Z}") const;
+        std::string toString(const std::string &format = "{:L%F %T %Z}") const;
 
-        // bool isDaylightSavingTime();
+        Date toUtcTimeZone() const;
+        Date toLocalTimeZone() const;
+        Date toDefaultTimeZone() const;
+        Date toTimeZone(const std::string &timeZoneName) const;
+        Date toTimeZone(const std::chrono::time_zone *timeZone) const;
+
+        Date &changeTimeZoneToUtc();
+        Date &changeTimeZoneToLocal();
+        Date &changeTimeZoneToDefault();
+        Date &changeTimeZone(const std::string &timeZoneName);
+        Date &changeTimeZone(const std::chrono::time_zone *timeZone);
+
+        bool isDaylightSavingTime();
 
         Date &add(const Time &time);
         Date &addYears(int years);

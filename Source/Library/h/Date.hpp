@@ -34,7 +34,8 @@ namespace sd
     {
       private:
         std::chrono::time_point<std::chrono::system_clock> _timePoint;
-        const std::chrono::time_zone *_timeZone = nullptr;
+        std::chrono::seconds _offset{0};
+        const std::chrono::time_zone *_timeZone{nullptr};
 
       public:
         static const std::chrono::time_zone *defaultTimeZone;
@@ -89,6 +90,8 @@ namespace sd
         std::chrono::year_month_day yearMonthDay() const;
 
         std::chrono::time_point<std::chrono::system_clock> timePoint() const;
+        std::chrono::time_point<std::chrono::system_clock> zonedTimePoint() const;
+        std::chrono::seconds offset() const;
         const std::chrono::time_zone *timeZone() const;
 
         std::string toString(const std::string &format = "{:L%F %T %Z}") const;
@@ -139,6 +142,10 @@ namespace sd
         Date &operator-=(const Months &months);
 
         operator bool() const;
+
+      private:
+        template <class Rep, class Period> Date &add(std::chrono::duration<Rep, Period> duration);
+        void recomputeOffset();
     };
 
     Date operator+(const Date &date, const Time &time);

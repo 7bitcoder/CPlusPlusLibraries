@@ -11,7 +11,7 @@ using namespace std::chrono;
 class DateTest : public ::testing::Test
 {
   protected:
-    DateTest() {}
+    DateTest() { Date::defaultTimeZone = locate_zone("Europe/Warsaw"); }
 
     void SetUp() override {}
 
@@ -843,6 +843,82 @@ TEST_F(DateTest, MonthLiteralTest)
 
 #pragma endregion
 
+#pragma region TimeZoneConvertTest
+
+TEST_F(DateTest, ChangeToUtcTimeZoneTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s};
+
+    EXPECT_EQ(date.changeTimeZoneToUtc(), (Date{2011y / January / 12, {8, 19, 11}, "UTC"}));
+}
+
+TEST_F(DateTest, ChangeToLocalTimeZoneTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s, "UTC"};
+
+    EXPECT_EQ(date.changeTimeZoneToLocal(), (Date{2011y / January / 12, {10, 19, 11}}));
+}
+
+TEST_F(DateTest, ChangeToDefaultZoneTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s, "UTC"};
+
+    EXPECT_EQ(date.changeTimeZoneToDefault(), (Date{2011y / January / 12, {10, 19, 11}}));
+}
+
+TEST_F(DateTest, ChangeToTimeZoneTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s, "UTC"};
+
+    EXPECT_EQ(date.changeTimeZone("Europe/Moscow"), (Date{2011y / January / 12, {12, 19, 11}, "Europe/Moscow"}));
+}
+
+TEST_F(DateTest, ChangeToTimeZoneRawTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s, "UTC"};
+
+    EXPECT_EQ(date.changeTimeZone(locate_zone("Europe/Moscow")),
+              (Date{2011y / January / 12, {12, 19, 11}, "Europe/Moscow"}));
+}
+
+TEST_F(DateTest, ToUtcTimeZoneTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s};
+
+    EXPECT_EQ(date.toUtcTimeZone(), (Date{2011y / January / 12, {8, 19, 11}, "UTC"}));
+}
+
+TEST_F(DateTest, ToLocalTimeZoneTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s, "UTC"};
+
+    EXPECT_EQ(date.toLocalTimeZone(), (Date{2011y / January / 12, {10, 19, 11}}));
+}
+
+TEST_F(DateTest, ToDefaultZoneTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s, "UTC"};
+
+    EXPECT_EQ(date.toDefaultTimeZone(), (Date{2011y / January / 12, {10, 19, 11}}));
+}
+
+TEST_F(DateTest, ToTimeZoneTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s, "UTC"};
+
+    EXPECT_EQ(date.toTimeZone("Europe/Moscow"), (Date{2011y / January / 12, {12, 19, 11}, "Europe/Moscow"}));
+}
+
+TEST_F(DateTest, ToTimeZoneRawTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s, "UTC"};
+
+    EXPECT_EQ(date.toTimeZone(locate_zone("Europe/Moscow")),
+              (Date{2011y / January / 12, {12, 19, 11}, "Europe/Moscow"}));
+}
+
+#pragma endregion
+
 #pragma region ConvertTest
 
 TEST_F(DateTest, ToStringDefaultTest)
@@ -864,6 +940,13 @@ TEST_F(DateTest, ToStringMicrosecondsTest)
     Date date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
 
     EXPECT_EQ(date.toString("{}"), std::string{"2011-01-12 09:19:11.0130200 CET"});
+}
+
+TEST_F(DateTest, ToStringMoscowTest)
+{
+    Date date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us, "Europe/Moscow"};
+
+    EXPECT_EQ(date.toString("{}"), std::string{"2011-01-12 09:19:11.0130200 GMT+3"});
 }
 
 TEST_F(DateTest, ToStringHoursAndMinutesTest)
@@ -904,10 +987,14 @@ TEST_F(DateTest, ParseDefaultTest)
 {
     Date date = Date::parse("2011-01-12 09:19:11.0130200 CET");
 
-    auto hrs = date.timeOfDay().totalHours();
-    auto dat = Date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us};
-    auto hrs2 = dat.timeOfDay().totalHours();
-    EXPECT_EQ(date, dat);
+    EXPECT_EQ(date, (Date{2011y / January / 12, 9_h + 19_min + 11_s + 13_ms + 20_us}));
+}
+
+TEST_F(DateTest, ParseMoscowTest)
+{
+    Date date = Date::parse("2011-01-12 09:19:11.0130200 GMT+3");
+
+    EXPECT_EQ(date, (Date{2011y / January / 12, 6_h + 19_min + 11_s + 13_ms + 20_us}));
 }
 
 TEST_F(DateTest, ParseHoursAndMinutesTest)

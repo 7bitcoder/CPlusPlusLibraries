@@ -18,6 +18,7 @@ namespace sd
     using YearMonthWeekday = std::chrono::year_month_weekday;
     using ZT = std::chrono::zoned_time<std::chrono::system_clock::duration>;
     using TimeZonePtr = const std::chrono::time_zone *;
+    template <class Rep, class Period = std::ratio<1>> using Duration = std::chrono::duration<Rep, Period>;
 
     using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
     using TimePointDays = std::chrono::time_point<std::chrono::system_clock, std::chrono::days>;
@@ -39,39 +40,23 @@ namespace sd
 
         template <class D> auto castToMicroseconds(D dur) { return duration_cast<Microseconds>(dur); }
 
-        TimePoint updateTPWithZone(TimePoint tp, TimeZonePtr tz) { return tp + tz->get_info(tp).offset; }
+        TimePointDays toTotalDays(TimePoint timePoint) { return floor<CDays>(timePoint); }
 
-        TimePoint normalizeTP(TimePoint tp, TimeZonePtr tz)
-        {
-            auto info = tz->get_info(tp);
-            tp -= info.offset;
-            if (tp >= info.begin)
-            {
-                return tp;
-            }
-            auto newInfo = tz->get_info(tp);
-            tp = tp + info.offset - newInfo.offset;
-            return tp;
-        }
+        auto YMWD(TimePoint timePoint) { return YearMonthWeekday{toTotalDays(timePoint)}; }
 
-        TimePointDays toTotalDays(TimePoint tp) { return floor<CDays>(tp); }
-
-        TimePoint createTP(YearMonthDay ymd, Time dayTime)
+        TimePoint createTimePoint(YearMonthDay ymd, Time dayTime)
         {
             if (!ymd.ok())
                 ymd = ymd.year() / ymd.month() / last;
             return sys_days{ymd} + dayTime.raw();
         }
 
-        auto decomposeTP(TimePoint tp, TimeZonePtr tz, bool raw = false)
+        auto decomposeTimePoint(TimePoint timePoint)
         {
-            tp = raw ? tp : updateTPWithZone(tp, tz);
-            auto days = toTotalDays(tp);
-            Microseconds rest = castToMicroseconds(tp - days);
+            auto days = toTotalDays(timePoint);
+            Microseconds rest = castToMicroseconds(timePoint - days);
             return std::make_pair(YearMonthDay{days}, rest);
         }
-
-        auto YMWD(TimePoint tp, TimeZonePtr tz) { return YearMonthWeekday{toTotalDays(updateTPWithZone(tp, tz))}; }
 
     } // namespace
 
@@ -87,7 +72,7 @@ namespace sd
     {
         TimePoint timePoint;
         std::stringstream ss{source};
-        Minutes offset;
+        Minutes offset{0};
         std::string abbrev;
         if (from_stream(ss, format.c_str(), timePoint, &abbrev, &offset))
         {
@@ -98,6 +83,7 @@ namespace sd
             }
             catch (...)
             {
+                timePoint -= offset;
             }
             date = Date{timePoint, timeZone, true};
             return true;
@@ -109,7 +95,7 @@ namespace sd
 
     Date Date::max() { return Date{system_clock::now().max(), Date::defaultTimeZone}; }
     Date Date::min() { return Date{system_clock::now().min(), Date::defaultTimeZone}; }
-    Date Date::unixEpoch() { return Date{createTP(1970y / January / 1, 0), Date::defaultTimeZone}; }
+    Date Date::unixEpoch() { return Date{createTimePoint(1970y / January / 1, 0), Date::defaultTimeZone}; }
 
     Date Date::now() { return Date{system_clock::now(), Date::defaultTimeZone}; }
     Date Date::nowInUtcTimeZone() { return Date{system_clock::now(), getUtcTimeZone()}; }
@@ -138,7 +124,7 @@ namespace sd
     {
     }
     Date::Date(YearMonthDay date, Time timeOfDay, const std::string &timeZoneName)
-        : Date{createTP(date, timeOfDay), timeZoneName, true}
+        : Date{createTimePoint(date, timeOfDay), timeZoneName, true}
     {
     }
     Date::Date(TimePoint timePoint, const std::string &timeZoneName, bool normalize)
@@ -147,10 +133,22 @@ namespace sd
     }
 
     Date::Date(TimePoint timePoint, TimeZonePtr timeZone, bool normalize)
-        : _timePoint{timePoint}, _timeZone{!timeZone ? Date::defaultTimeZone : timeZone}
     {
-        if (normalize)
-            _timePoint = normalizeTP(_timePoint, _timeZone);
+        _timePoint = timePoint;
+        _timeZone = !timeZone ? Date::defaultTimeZone : timeZone;
+        auto info = _timeZone->get_info(_timePoint);
+        _offset = info.offset;
+
+        if (!normalize)
+            return;
+
+        _timePoint -= info.offset;
+        if (_timePoint < info.begin)
+        {
+            auto newInfo = _timeZone->get_info(_timePoint);
+            _timePoint = _timePoint + info.offset - newInfo.offset;
+            _offset = newInfo.offset;
+        }
     }
 
     int Date::year() const { return int{yearMonthDay().year()}; }
@@ -162,11 +160,11 @@ namespace sd
     int Date::milisecond() const { return timeOfDay().miliseconds(); }
     long long Date::microsecond() const { return timeOfDay().microseconds(); }
 
-    Time Date::timeOfDay() const { return Time{decomposeTP(timePoint(), timeZone()).second}; }
-    int Date::weekOfMonth() const { return YMWD(timePoint(), timeZone()).weekday_indexed().index(); }
+    Time Date::timeOfDay() const { return Time{decomposeTimePoint(zonedTimePoint()).second}; }
+    int Date::weekOfMonth() const { return YMWD(zonedTimePoint()).weekday_indexed().index(); }
     DayOfWeek Date::dayOfWeek() const
     {
-        return static_cast<DayOfWeek>(YMWD(timePoint(), timeZone()).weekday().iso_encoding());
+        return static_cast<DayOfWeek>(YMWD(zonedTimePoint()).weekday().iso_encoding());
     }
     int Date::dayOfYear() const
     {
@@ -179,9 +177,11 @@ namespace sd
         return result + day();
     }
 
-    YearMonthDay Date::yearMonthDay() const { return decomposeTP(timePoint(), timeZone()).first; }
+    YearMonthDay Date::yearMonthDay() const { return decomposeTimePoint(zonedTimePoint()).first; }
 
     TimePoint Date::timePoint() const { return _timePoint; }
+    TimePoint Date::zonedTimePoint() const { return _timePoint + offset(); }
+    Seconds Date::offset() const { return _offset; }
     TimeZonePtr Date::timeZone() const { return _timeZone; };
 
     std::string Date::toString(const std::string &fmt) const { return std::format(fmt, ZT{timeZone(), timePoint()}); }
@@ -199,30 +199,29 @@ namespace sd
     Date &Date::changeTimeZone(TimeZonePtr timeZone)
     {
         _timeZone = timeZone;
+        recomputeOffset();
         return *this;
     }
 
-    bool Date::isDaylightSavingTime() { return _timeZone->get_info(timePoint()).save > 0; }
+    bool Date::isDaylightSavingTime() { return timeZone()->get_info(timePoint()).save > 0; }
 
-    Date &Date::add(const Time &time)
-    {
-        _timePoint += time.raw();
-        return *this;
-    }
+    Date &Date::add(const Time &time) { return add(time.raw()); }
+    Date &Date::addYears(int years) { return add(CYears{years}); }
+    Date &Date::addMonths(int months) { return add(CMonths{months}); }
 
-    Date &Date::addYears(int years)
+    template <class Rep, class Period> Date &Date::add(Duration<Rep, Period> duration)
     {
-        auto [ymd, timeOfDay] = decomposeTP(timePoint(), timeZone(), true);
-        ymd += CYears{years};
-        _timePoint = createTP(ymd, castToMicroseconds(timeOfDay));
-        return *this;
-    }
-
-    Date &Date::addMonths(int months)
-    {
-        auto [ymd, timeOfDay] = decomposeTP(timePoint(), timeZone(), true);
-        ymd += CMonths{months};
-        _timePoint = createTP(ymd, castToMicroseconds(timeOfDay));
+        if constexpr (Duration<Rep, Period>::period::num < CMonths::period::num)
+        {
+            _timePoint += duration;
+        }
+        else
+        {
+            auto [ymd, timeOfDay] = decomposeTimePoint(timePoint());
+            ymd += duration;
+            _timePoint = createTimePoint(ymd, timeOfDay);
+        }
+        recomputeOffset();
         return *this;
     }
 
@@ -253,6 +252,8 @@ namespace sd
     Date &Date::operator-=(const Months &months) { return substractMonths(months.value); }
 
     Date::operator bool() const { return *this != Date{0}; }
+
+    void Date::recomputeOffset() { _offset = timeZone()->get_info(timePoint()).offset; }
 
     Date operator+(const Date &date, const Time &time) { return Date{date}.add(time); }
     Date operator+(const Date &date, const Years &years) { return Date{date}.addYears(years.value); }

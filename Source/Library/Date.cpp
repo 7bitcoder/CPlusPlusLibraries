@@ -26,6 +26,16 @@ namespace sd
             return timeZone;
         }
 
+        ch::timeZonePtr findByAbbrev(ch::timePoint timePoint, const std::string &abbrev)
+        {
+            auto &db = ch::get_tzdb();
+            for (auto &zone : db.zones)
+            {
+                if (zone.get_info(timePoint).abbrev == abbrev)
+                    return &zone;
+            }
+            return nullptr;
+        }
         template <class D> unsigned unsignedCast(D value) { return static_cast<unsigned>(value); }
         auto yearMonthLastDay(int yr, int mo) { return ch::year{yr} / ch::month{unsignedCast(mo)} / ch::last; }
 
@@ -59,8 +69,6 @@ namespace sd
                 return createTimePoint(ymd, timeOfDay);
             }
         }
-
-        std::string toStringRaw(ch::timePoint timepoint) { return std::format("{:L%F %T %Z}", timepoint); }
     } // namespace
 
     Date Date::parse(const std::string &source, const std::string &format)
@@ -79,16 +87,24 @@ namespace sd
         std::string abbrev;
         if (from_stream(ss, format.c_str(), timePoint, &abbrev, &offset))
         {
-            // ch::timeZonePtr timeZone = nullptr;
-            // try
-            // {
-            //     timeZone = ch::locate_zone(abbrev);
-            // }
-            // catch (...)
-            // {
-            //     // timePoint -= offset;
-            // }
-            date = Date{timePoint};
+            ch::timeZonePtr timeZone = nullptr;
+            try
+            {
+                timeZone = ch::locate_zone(abbrev);
+            }
+            catch (...)
+            {
+                timeZone = findByAbbrev(timePoint, abbrev);
+            }
+            if (!timeZone && !abbrev.empty())
+            {
+                timePoint -= offset;
+                date = Date{timePoint, getUtcTimeZone(), false};
+            }
+            else
+            {
+                date = Date{timePoint, timeZone, true};
+            }
             return true;
         }
         return false;

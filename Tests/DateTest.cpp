@@ -99,7 +99,7 @@ TEST_F(DateTest, SpecialConstructorTest)
 TEST_F(DateTest, ConstructingOnEdgeOfDaylightTest)
 {
     // date doesnt exists
-    EXPECT_THROW((Date{2022y / March / 27, {2, 19, 11}}), std::invalid_argument);
+    EXPECT_THROW(Date(2022, 3, 27, 2, 19, 11), std::invalid_argument);
 }
 
 #pragma endregion

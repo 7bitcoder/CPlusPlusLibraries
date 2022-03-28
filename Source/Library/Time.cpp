@@ -6,40 +6,39 @@
 
 namespace sd
 {
-    using Days = std::chrono::days;
-    using Hours = std::chrono::hours;
-    using Minutes = std::chrono::minutes;
-    using Seconds = std::chrono::seconds;
-    using Milliseconds = std::chrono::milliseconds;
-    using Microseconds = std::chrono::microseconds;
-    using HHMMSS = std::chrono::hh_mm_ss<Milliseconds>;
-    template <class Rep, class Period> using Dur = std::chrono::duration<Rep, Period>;
 
-    using namespace std::chrono;
+    namespace ch
+    {
+
+        using namespace std::chrono;
+        template <class Rep, class Period> using dur = duration<Rep, Period>;
+
+        using HHMMSS = hh_mm_ss<milliseconds>;
+    } // namespace ch
 
     namespace
     {
-        template <class D> D roundToZero(Microseconds dur) { return dur < 0 ? ceil<D>(dur) : floor<D>(dur); }
+        template <class D> D roundToZero(ch::microseconds dur) { return dur < 0 ? ceil<D>(dur) : floor<D>(dur); }
 
-        template <class D> auto castToMicroseconds(D dur) { return duration_cast<Microseconds>(dur); }
+        template <class D> auto castToMicroseconds(D dur) { return duration_cast<ch::microseconds>(dur); }
 
         template <class D> Time from(int duration) { return Time{castToMicroseconds(D{duration})}; }
         template <class D> Time from(double duration) { return Time{castToMicroseconds(D{1} * duration)}; }
-        template <class D> double to(Time time) { return time.toDuration<Dur<double, typename D::period>>().count(); }
+        template <class D> auto to(Time time) { return time.toDuration<ch::dur<double, typename D::period>>().count(); }
 
-        auto decomposeDays(Microseconds duration)
+        auto decomposeDays(ch::microseconds duration)
         {
-            auto days = roundToZero<Days>(duration);
+            auto days = roundToZero<ch::days>(duration);
             auto rest = duration - days;
             return std::make_pair(days, rest);
         }
 
-        auto decomposeHHMMSS(Microseconds duration)
+        auto decomposeHHMMSS(ch::microseconds duration)
         {
             auto [days, rest] = decomposeDays(duration);
-            Milliseconds restInMili = roundToZero<Milliseconds>(rest);
-            Microseconds restMicroseconds = rest - restInMili;
-            HHMMSS hh{restInMili};
+            ch::milliseconds restInMili = roundToZero<ch::milliseconds>(rest);
+            ch::microseconds restMicroseconds = rest - restInMili;
+            ch::HHMMSS hh{restInMili};
             return std::make_pair(hh, restMicroseconds);
         }
 
@@ -47,43 +46,43 @@ namespace sd
     auto hh = decomposeHHMMSS(duration).first;                                                                         \
     return hh.what().count() * (hh.is_negative() ? -1 : 1);
 
-        auto decomposeHours(Microseconds duration) { DECOMPOSE(hours); }
-        auto decomposeMinutes(Microseconds duration) { DECOMPOSE(minutes); }
-        auto decomposeSeconds(Microseconds duration) { DECOMPOSE(seconds); }
-        auto decomposeMiliseconds(Microseconds duration) { DECOMPOSE(subseconds); }
-        auto decomposeMicroseconds(Microseconds duration) { return decomposeHHMMSS(duration).second.count(); };
+        auto decomposeHours(ch::microseconds duration) { DECOMPOSE(hours); }
+        auto decomposeMinutes(ch::microseconds duration) { DECOMPOSE(minutes); }
+        auto decomposeSeconds(ch::microseconds duration) { DECOMPOSE(seconds); }
+        auto decomposeMiliseconds(ch::microseconds duration) { DECOMPOSE(subseconds); }
+        auto decomposeMicroseconds(ch::microseconds duration) { return decomposeHHMMSS(duration).second.count(); };
 
     } // namespace
 
-    const Time Time::max = Time{Microseconds::max()};
-    const Time Time::min = Time{Microseconds::min()};
-    const Time Time::zero = Time{Microseconds::zero()};
+    const Time Time::max = Time{ch::microseconds::max()};
+    const Time Time::min = Time{ch::microseconds::min()};
+    const Time Time::zero = Time{ch::microseconds::zero()};
 
     Time Time::parse(const std::string &source, const std::string &format)
     {
-        Microseconds duration;
+        ch::microseconds duration;
         std::stringstream ss{source};
         from_stream(ss, format.c_str(), duration);
         return Time{duration};
     }
 
-    Time Time::fromDays(int days) { return from<Days>(days); }
-    Time Time::fromDays(double days) { return from<Days>(days); }
-    Time Time::fromHours(int hours) { return from<Hours>(hours); }
-    Time Time::fromHours(double hours) { return from<Hours>(hours); }
-    Time Time::fromMinutes(int minutes) { return from<Minutes>(minutes); }
-    Time Time::fromMinutes(double minutes) { return from<Minutes>(minutes); }
-    Time Time::fromSeconds(int seconds) { return from<Seconds>(seconds); }
-    Time Time::fromSeconds(double seconds) { return from<Seconds>(seconds); }
-    Time Time::fromMiliseconds(int miliseconds) { return from<Milliseconds>(miliseconds); }
-    Time Time::fromMiliseconds(double miliseconds) { return from<Milliseconds>(miliseconds); }
+    Time Time::fromDays(int days) { return from<ch::days>(days); }
+    Time Time::fromDays(double days) { return from<ch::days>(days); }
+    Time Time::fromHours(int hours) { return from<ch::hours>(hours); }
+    Time Time::fromHours(double hours) { return from<ch::hours>(hours); }
+    Time Time::fromMinutes(int minutes) { return from<ch::minutes>(minutes); }
+    Time Time::fromMinutes(double minutes) { return from<ch::minutes>(minutes); }
+    Time Time::fromSeconds(int seconds) { return from<ch::seconds>(seconds); }
+    Time Time::fromSeconds(double seconds) { return from<ch::seconds>(seconds); }
+    Time Time::fromMiliseconds(int miliseconds) { return from<ch::milliseconds>(miliseconds); }
+    Time Time::fromMiliseconds(double miliseconds) { return from<ch::milliseconds>(miliseconds); }
     Time Time::fromMicroseconds(long long microseconds) { return Time{microseconds}; }
 
-    Time::Time(long long microseconds) : _time{Microseconds{microseconds}} {}
-    Time::Time(int hour, int minute, int second) : _time{Hours{hour} + Minutes{minute} + Seconds{second}} {}
+    Time::Time(long long microseconds) : _time{ch::microseconds{microseconds}} {}
+    Time::Time(int hour, int minute, int second) : _time{ch::hours{hour} + ch::minutes{minute} + ch::seconds{second}} {}
     Time::Time(int days, int hour, int minute, int second, int miliseconds, int microseconds)
-        : _time{Days{days} + Hours{hour} + Minutes{minute} + Seconds{second} + Milliseconds{miliseconds} +
-                Microseconds{microseconds}}
+        : _time{ch::days{days} + ch::hours{hour} + ch::minutes{minute} + ch::seconds{second} +
+                ch::milliseconds{miliseconds} + ch::microseconds{microseconds}}
     {
     }
 
@@ -94,13 +93,13 @@ namespace sd
     int Time::miliseconds() const { return decomposeMiliseconds(raw()); }
     int Time::microseconds() const { return decomposeMicroseconds(raw()); }
 
-    double Time::totalDays() const { return to<Days>(raw()); }
-    double Time::totalHours() const { return to<Hours>(raw()); }
-    double Time::totalMinutes() const { return to<Minutes>(raw()); }
-    double Time::totalSeconds() const { return to<Seconds>(raw()); }
-    double Time::totalMiliseconds() const { return to<Milliseconds>(raw()); }
+    double Time::totalDays() const { return to<ch::days>(raw()); }
+    double Time::totalHours() const { return to<ch::hours>(raw()); }
+    double Time::totalMinutes() const { return to<ch::minutes>(raw()); }
+    double Time::totalSeconds() const { return to<ch::seconds>(raw()); }
+    double Time::totalMiliseconds() const { return to<ch::milliseconds>(raw()); }
     long long Time::totalMicroseconds() const { return raw().count(); }
-    Microseconds Time::raw() const { return _time; }
+    ch::microseconds Time::raw() const { return _time; }
 
     std::string Time::toString(const std::string &format) const { return std::format(format, raw()); }
 

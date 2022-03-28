@@ -1,6 +1,7 @@
 #include <chrono>
 #include <gtest/gtest.h>
 #include <iostream>
+#include <stdexcept>
 #include <thread>
 
 #include "Date.hpp"
@@ -11,7 +12,9 @@ using namespace std::chrono;
 class DateTest : public ::testing::Test
 {
   protected:
-    DateTest() { Date::defaultTimeZone = locate_zone("Europe/Warsaw"); }
+    static void SetUpTestSuite() { Date::defaultTimeZone = locate_zone("Europe/Warsaw"); }
+
+    DateTest() {}
 
     void SetUp() override {}
 
@@ -91,6 +94,12 @@ TEST_F(DateTest, SpecialConstructorTest)
     EXPECT_EQ(date.minute(), 19);
     EXPECT_EQ(date.second(), 11);
     EXPECT_EQ(date.milisecond(), 13);
+}
+
+TEST_F(DateTest, ConstructingOnEdgeOfDaylightTest)
+{
+    // date doesnt exists
+    EXPECT_THROW((Date{2022y / March / 27, {2, 19, 11}}), std::invalid_argument);
 }
 
 #pragma endregion
@@ -994,7 +1003,8 @@ TEST_F(DateTest, ParseMoscowTest)
 {
     Date date = Date::parse("2011-01-12 09:19:11.0130200 GMT+3");
 
-    EXPECT_EQ(date, (Date{2011y / January / 12, 6_h + 19_min + 11_s + 13_ms + 20_us}));
+    auto hrs = date.hour();
+    EXPECT_EQ(date, (Date{2011y / January / 12, 7_h + 19_min + 11_s + 13_ms + 20_us}));
 }
 
 TEST_F(DateTest, ParseHoursAndMinutesTest)

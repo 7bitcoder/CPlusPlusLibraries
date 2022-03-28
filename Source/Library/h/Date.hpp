@@ -52,7 +52,8 @@ namespace sd
 
         Date(long long microseconds, const std::string &timeZoneName = "");
         Date(int year, int month, int day, const std::string &timeZoneName = "");
-        Date(int year, int month, int day, int hour, int minute = 0, int second = 0, int miliseconds = 0,
+        Date(int year, int month, int day, int hour, int minute, int second, const std::string &timeZoneName = "");
+        Date(int year, int month, int day, int hour, int minute, int second, int miliseconds,
              const std::string &timeZoneName = "");
         Date(int year, int month, int day, int hour, int minute, int second, int miliseconds,
              const std::chrono::time_zone *timeZone);
@@ -76,11 +77,11 @@ namespace sd
         int dayOfYear() const;
 
         std::chrono::year_month_day yearMonthDay() const;
+        std::chrono::year_month_weekday yearMonthWeekday() const;
 
+        std::chrono::time_point<std::chrono::system_clock> timePoint() const;
         std::chrono::seconds offset() const;
         const std::chrono::time_zone *timeZone() const;
-        std::chrono::time_point<std::chrono::system_clock> timePoint() const;
-        std::chrono::time_point<std::chrono::system_clock> zonedTimePoint() const;
 
         std::string toString(const std::string &format = "{:L%F %T %Z}") const;
 
@@ -98,7 +99,6 @@ namespace sd
 
         bool isDaylightSavingTime();
 
-        Date &add(const Time &time);
         Date &addYears(int years);
         Date &addMonths(int months);
         Date &addDays(int days);
@@ -107,9 +107,8 @@ namespace sd
         Date &addSeconds(int seconds);
         Date &addMiliseconds(int miliseconds);
         Date &addMicroseconds(long long microseconds);
+        Date &add(const Time &time);
 
-        Time substract(const Date &date) const;
-        Date &substract(const Time &time);
         Date &substractYears(int years);
         Date &substractMonths(int months);
         Date &substractDays(int days);
@@ -118,6 +117,8 @@ namespace sd
         Date &substractSeconds(int seconds);
         Date &substractMiliseconds(int miliseconds);
         Date &substractMicroseconds(long long microseconds);
+        Date &substract(const Time &time);
+        Time substract(const Date &date) const;
 
         Date &operator=(const Date &other) = default;
 
@@ -137,8 +138,9 @@ namespace sd
         Date(std::chrono::time_point<std::chrono::system_clock> timePoint,
              const std::chrono::time_zone *timeZone = nullptr, bool normalize = false);
 
-        template <class Rep, class Period> Date &add(std::chrono::duration<Rep, Period> duration);
         void recomputeOffset();
+        std::chrono::time_point<std::chrono::system_clock> zonedTimePoint() const;
+        template <class Rep, class Period> Date &add(std::chrono::duration<Rep, Period> duration);
 
         std::chrono::time_point<std::chrono::system_clock> _timePoint;
         std::chrono::seconds _offset{0};

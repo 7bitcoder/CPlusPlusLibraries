@@ -5,6 +5,8 @@
 class Template : public ::testing::Test
 {
   protected:
+    static void SetUpTestSuite() {}
+
     Template() {}
 
     void SetUp() override

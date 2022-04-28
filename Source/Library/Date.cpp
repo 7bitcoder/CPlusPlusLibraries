@@ -1,5 +1,6 @@
 #include "Date.hpp"
 #include <chrono>
+#include <format>
 
 namespace sd
 {
@@ -208,7 +209,7 @@ namespace sd
     ch::timePoint Date::timePoint() const { return _timePoint; }
     ch::timePoint Date::zonedTimePoint() const { return _timePoint + offset(); }
     ch::seconds Date::offset() const { return _offset; }
-    ch::timeZonePtr Date::timeZone() const { return _timeZone; };
+    ch::timeZonePtr Date::timeZone() const { return _timeZone; }
 
     std::string Date::toString(const std::string &f) const { return std::format(f, ch::zt{timeZone(), timePoint()}); }
 

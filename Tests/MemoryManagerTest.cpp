@@ -6,22 +6,22 @@
 
 #include "MemoryManager.hpp "
 
-struct FinalizeCntClass : public sd::Object
+struct DestructionCntClass : public sd::Object
 {
-    inline static int finalizeCalledCnt = 0;
-    void finalize() override { finalizeCalledCnt++; }
+    inline static int destructionCnt = 0;
+    ~DestructionCntClass() { destructionCnt++; }
 };
 
-struct ComplexClass : public FinalizeCntClass
+struct ComplexClass : public DestructionCntClass
 {
     int a;
-    ComplexClass(int a) : FinalizeCntClass() { this->a = a; }
+    ComplexClass(int a) : DestructionCntClass() { this->a = a; }
 };
 
-struct CirceClass : public FinalizeCntClass
+struct CirceClass : public DestructionCntClass
 {
-    std::shared_ptr<FinalizeCntClass> a = nullptr;
-    CirceClass(std::shared_ptr<FinalizeCntClass> a) { this->a = a; }
+    std::shared_ptr<DestructionCntClass> a = nullptr;
+    CirceClass(std::shared_ptr<DestructionCntClass> a) { this->a = a; }
 };
 
 class MemoryManagerTest : public ::testing::Test
@@ -45,14 +45,14 @@ class MemoryManagerTest : public ::testing::Test
 
 TEST_F(MemoryManagerTest, AllocationTest)
 {
-    auto ptr = sd::MemoryManager::instance().allocate<FinalizeCntClass>();
+    auto ptr = sd::MemoryManager::instance().create<DestructionCntClass>();
 
     EXPECT_EQ(2, ptr.use_count());
 }
 
 TEST_F(MemoryManagerTest, ToStringTest)
 {
-    auto ptr = sd::MemoryManager::instance().allocate<FinalizeCntClass>();
+    auto ptr = sd::MemoryManager::instance().create<DestructionCntClass>();
 
     auto className = ptr->toString();
 
@@ -61,7 +61,7 @@ TEST_F(MemoryManagerTest, ToStringTest)
 
 TEST_F(MemoryManagerTest, HashCodeTest)
 {
-    auto ptr = sd::MemoryManager::instance().allocate<FinalizeCntClass>();
+    auto ptr = sd::MemoryManager::instance().create<DestructionCntClass>();
 
     auto code = ptr->getHashCode();
 
@@ -70,15 +70,15 @@ TEST_F(MemoryManagerTest, HashCodeTest)
 
 TEST_F(MemoryManagerTest, GarbageCollectTest)
 {
-    sd::MemoryManager::instance().allocate<FinalizeCntClass>();
+    sd::MemoryManager::instance().create<DestructionCntClass>();
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_EQ(1, FinalizeCntClass::finalizeCalledCnt);
+    EXPECT_EQ(1, DestructionCntClass::destructionCnt);
 }
 
 TEST_F(MemoryManagerTest, AllocationComplexTest)
 {
-    auto ptr = sd::MemoryManager::instance().allocate<ComplexClass>(1);
+    auto ptr = sd::MemoryManager::instance().create<ComplexClass>(1);
 
     EXPECT_EQ(1, ptr->a);
     EXPECT_EQ(2, ptr.use_count());
@@ -86,28 +86,28 @@ TEST_F(MemoryManagerTest, AllocationComplexTest)
 
 TEST_F(MemoryManagerTest, BigGarbageCollectTest)
 {
-    sd::MemoryManager::instance().allocate<ComplexClass>(1);
-    sd::MemoryManager::instance().allocate<ComplexClass>(1);
-    sd::MemoryManager::instance().allocate<ComplexClass>(1);
-    sd::MemoryManager::instance().allocate<ComplexClass>(1);
-    sd::MemoryManager::instance().allocate<ComplexClass>(1);
-    sd::MemoryManager::instance().allocate<ComplexClass>(1);
+    sd::MemoryManager::instance().create<ComplexClass>(1);
+    sd::MemoryManager::instance().create<ComplexClass>(1);
+    sd::MemoryManager::instance().create<ComplexClass>(1);
+    sd::MemoryManager::instance().create<ComplexClass>(1);
+    sd::MemoryManager::instance().create<ComplexClass>(1);
+    sd::MemoryManager::instance().create<ComplexClass>(1);
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_EQ(6, FinalizeCntClass::finalizeCalledCnt);
+    EXPECT_EQ(6, DestructionCntClass::destructionCnt);
 }
 
 TEST_F(MemoryManagerTest, GarbageCollectCicleTest)
 {
     {
-        auto circle = sd::MemoryManager::instance().allocate<CirceClass>(nullptr);
-        auto circle2 = sd::MemoryManager::instance().allocate<CirceClass>(circle);
+        auto circle = sd::MemoryManager::instance().create<CirceClass>(nullptr);
+        auto circle2 = sd::MemoryManager::instance().create<CirceClass>(circle);
         circle->a = circle2;
     }
 
     sd::MemoryManager::instance().garbageCollect();
 
     // todo implement circle detection and fix it to 2
-    EXPECT_EQ(0, FinalizeCntClass::finalizeCalledCnt);
+    EXPECT_EQ(0, DestructionCntClass::destructionCnt);
 }

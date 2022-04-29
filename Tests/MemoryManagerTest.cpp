@@ -4,14 +4,30 @@
 #include <iostream>
 #include <memory>
 #include <thread>
+#include <unordered_set>
 
 #include "MemoryManager.hpp"
 
 struct DestructionCntClass
 {
-    inline static int destructionCnt = 0;
-    ~DestructionCntClass() { destructionCnt++; }
+    static std::unordered_set<DestructionCntClass *> destructed;
+    static bool wasDestructed(std::vector<DestructionCntClass *> ptrs)
+    {
+        for (auto ptr : ptrs)
+        {
+            if (destructed.contains(ptr))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    static int destructionCnt() { return destructed.size(); }
+
+    ~DestructionCntClass() { destructed.insert(this); }
 };
+
+std::unordered_set<DestructionCntClass *> DestructionCntClass::destructed;
 
 struct ComplexClass : public DestructionCntClass
 {
@@ -32,34 +48,44 @@ class MemoryManagerTest : public ::testing::Test
 
     MemoryManagerTest() {}
 
-    void SetUp() override
-    {
-        // GTEST_SKIP() << "Skipping all tests for this fixture";
-    }
+    void SetUp() override { DestructionCntClass::destructed.clear(); }
 
-    void TearDown() override {}
+    void TearDown() override { sd::MemoryManager::instance().garbageCollect(); }
 
     ~MemoryManagerTest() {}
 
     static void TearDownTestSuite() {}
 };
 
-TEST_F(MemoryManagerTest, AllocationTest)
+TEST_F(MemoryManagerTest, ManagerShouldAllocateObject)
 {
     auto ptr = sd::make<DestructionCntClass>();
 
     EXPECT_NE(nullptr, ptr);
 }
 
-TEST_F(MemoryManagerTest, GarbageCollectTest)
+TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
 {
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
+    sd::make<DestructionCntClass>();
     sd::make<DestructionCntClass>();
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_EQ(1, DestructionCntClass::destructionCnt);
+    EXPECT_LE(1, DestructionCntClass::destructionCnt());
 }
 
-TEST_F(MemoryManagerTest, AllocationComplexTest)
+TEST_F(MemoryManagerTest, ManagerShouldAllocateComplexObject)
 {
     auto ptr = sd::make<ComplexClass>(1);
 
@@ -67,40 +93,43 @@ TEST_F(MemoryManagerTest, AllocationComplexTest)
     EXPECT_EQ(1, ptr->a);
 }
 
-TEST_F(MemoryManagerTest, GBNotCollectingTest)
+TEST_F(MemoryManagerTest, ManagerShouldNotCollectComplexObject)
 {
-    sd::MemoryManager::instance();
-
-    auto ptr = sd::make<DestructionCntClass>();
-    auto p = &ptr;
-    sd::MemoryManager::instance().garbageCollect();
-
-    EXPECT_EQ(0, DestructionCntClass::destructionCnt);
-}
-
-TEST_F(MemoryManagerTest, BigGarbageCollectTest)
-{
-    sd::make<ComplexClass>(1);
-    sd::make<ComplexClass>(1);
-    sd::make<ComplexClass>(1);
-    sd::make<ComplexClass>(1);
-    sd::make<ComplexClass>(1);
-    sd::make<ComplexClass>(1);
+    auto ptr1 = sd::make<ComplexClass>(1);
+    auto ptr2 = sd::make<ComplexClass>(1);
+    auto ptr3 = sd::make<ComplexClass>(1);
+    auto ptr4 = sd::make<ComplexClass>(1);
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_EQ(6, DestructionCntClass::destructionCnt);
+    EXPECT_FALSE(DestructionCntClass::wasDestructed({ptr1, ptr2, ptr3, ptr4}));
 }
 
-TEST_F(MemoryManagerTest, GarbageCollectCicleTest)
+TEST_F(MemoryManagerTest, ManagerShouldCollectCircleReferences)
 {
     {
         auto circle = sd::make<CirceClass>(nullptr);
         auto circle2 = sd::make<CirceClass>(circle);
         circle->a = circle2;
+
+        circle = sd::make<CirceClass>(nullptr);
+        circle2 = sd::make<CirceClass>(circle);
+        circle->a = circle2;
+
+        circle = sd::make<CirceClass>(nullptr);
+        circle2 = sd::make<CirceClass>(circle);
+        circle->a = circle2;
+
+        circle = sd::make<CirceClass>(nullptr);
+        circle2 = sd::make<CirceClass>(circle);
+        circle->a = circle2;
+
+        circle = sd::make<CirceClass>(nullptr);
+        circle2 = sd::make<CirceClass>(circle);
+        circle->a = circle2;
     }
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_EQ(2, DestructionCntClass::destructionCnt);
+    EXPECT_LE(2, DestructionCntClass::destructionCnt());
 }

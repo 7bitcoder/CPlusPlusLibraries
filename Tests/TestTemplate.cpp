@@ -9,10 +9,7 @@ class Template : public ::testing::Test
 
     Template() {}
 
-    void SetUp() override
-    {
-        // GTEST_SKIP() << "Skipping all tests for this fixture";
-    }
+    void SetUp() override {}
 
     void TearDown() override {}
 

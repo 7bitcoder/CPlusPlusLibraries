@@ -10,6 +10,29 @@
 
 #include "MemoryManager.hpp"
 
+#ifdef _WIN32
+#include <stdio.h>
+#include <tchar.h>
+#include <windows.h>
+#include <winuser.h>
+
+#include <processthreadsapi.h>
+
+#define WINDOWS
+#endif
+
+#ifdef linux
+
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <termios.h>
+#include <unistd.h>
+
+#define LINUX
+#endif
+
 namespace sd
 {
     namespace
@@ -26,6 +49,30 @@ namespace sd
 
 #define __READ_RBP() __asm__ volatile("movq %%rbp, %0" : "=r"(__rbp))
 #define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
+
+#ifdef WINDOWS
+        NT_TIB *getTIB()
+        {
+#ifdef _M_IX86
+            return (NT_TIB *)__readfsdword(0x18);
+#elif _M_AMD64
+            return (NT_TIB *)__readgsqword(0x30);
+#else
+#error unsupported architecture
+#endif
+        }
+
+        std::pair<uint8_t *, uint8_t *> getStackBounds()
+        {
+            __READ_RSP();
+            PULONG_PTR LowLimit;
+            PULONG_PTR HighLimit;
+            GetCurrentThreadStackLimits(LowLimit, HighLimit);
+            NT_TIB *tib = getTIB();
+            return {(uint8_t *)tib->StackBase, (uint8_t *)__rsp};
+        }
+#endif
+
     } // namespace
 
     class MemoryManagerImpl final : public IMemoryManagerImpl
@@ -38,14 +85,10 @@ namespace sd
         std::condition_variable_any _GCWaiter;
 
         size_t memoryAllocated = 0;
-        intptr_t *_stackBegin = nullptr;
+        void *_stackBegin = nullptr;
 
       public:
-        MemoryManagerImpl()
-        { // `main` frame pointer:
-            __READ_RBP();
-            _stackBegin = (intptr_t *)*__rbp;
-        }
+        MemoryManagerImpl(void *stackBegin) : _stackBegin(stackBegin) {}
 
         void runGCInBackground() final
         {
@@ -62,18 +105,14 @@ namespace sd
 
         void garbageCollect() final
         {
-            std::lock_guard l{_mutex};
             mark();
             sweep();
         }
 
         void registerObject(void *object, const TypeInfo *typeInfo) final
         {
-            {
-                std::lock_guard l{_mutex};
-                memoryAllocated += typeInfo->size;
-                _objectsMetadata[object] = {.marked = false, .typeInfo = typeInfo};
-            }
+            memoryAllocated += typeInfo->size;
+            _objectsMetadata[object] = {.marked = false, .typeInfo = typeInfo};
             if (isGBCollectionNeeded())
             {
                 //     _GCWaiter.notify_all();
@@ -130,23 +169,31 @@ namespace sd
 
         std::vector<void *> getRoots()
         {
-            std::vector<void *> result;
 
             // Some local variables (roots) can be stored in registers.
             // Use `setjmp` to push them all onto the stack.
             jmp_buf jb;
             setjmp(jb);
 
+            // auto [top, rsp] = getStackBounds();
+
             __READ_RSP();
             auto rsp = (uint8_t *)__rsp;
             auto top = (uint8_t *)_stackBegin;
 
+            std::vector<void *> result;
             while (rsp < top)
             {
-                auto address = (void *)rsp;
-                if (_objectsMetadata.count(address) != 0)
+                try
                 {
-                    result.emplace_back(address);
+                    auto address = (void *)*(uintptr_t *)rsp;
+                    if (_objectsMetadata.contains(address))
+                    {
+                        result.emplace_back(address);
+                    }
+                }
+                catch (...)
+                {
                 }
                 rsp++;
             }
@@ -161,8 +208,8 @@ namespace sd
             std::vector<void *> result;
             while (p < end)
             {
-                auto address = (void *)p;
-                if (_objectsMetadata.count(address) != 0)
+                auto address = (void *)*(uintptr_t *)p;
+                if (_objectsMetadata.contains(address))
                 {
                     result.emplace_back(address);
                 }
@@ -174,7 +221,7 @@ namespace sd
 
     MemoryManager &MemoryManager::instance()
     {
-        static MemoryManager ob{std::make_unique<MemoryManagerImpl>()};
+        static MemoryManager ob{std::make_unique<MemoryManagerImpl>(__builtin_frame_address(4))};
         return ob;
     }
 

@@ -26,12 +26,12 @@ namespace sd
     {
         static const TypeInfo *getInfo()
         {
-            static TypeInfo *info = new TypeInfo{sizeof(T), &del};
+            static TypeInfo *info = new TypeInfo{sizeof(T), &deleter};
             return info;
         };
 
       private:
-        static void del(void *object)
+        static void deleter(void *object)
         {
             auto ptr = reinterpret_cast<T *>(object);
             delete ptr;
@@ -68,7 +68,7 @@ namespace sd
         MemoryManager(const MemoryManager &) = delete;
         MemoryManager &operator=(const MemoryManager &) = delete;
 
-        static MemoryManager &instance();
+        [[gnu::noinline]] static MemoryManager &instance();
 
         template <class T, class... Args> T *create(Args &&...params)
         {
@@ -83,7 +83,7 @@ namespace sd
         void garbageCollect() override;
     };
 
-    template <class T, class... Args> T *make(Args &&...params)
+    template <class T, class... Args> inline T *make(Args &&...params)
     {
         return MemoryManager::instance().create<T>(std::forward<Args>(params)...);
     }

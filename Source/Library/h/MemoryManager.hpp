@@ -1,18 +1,47 @@
 #pragma once
 
+#include "MemoryManager.hpp"
 #include <list>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
+#include <typeindex>
+#include <typeinfo>
+#include <unordered_map>
+#include <vcruntime.h>
 
 namespace sd
 {
-    struct Object
+    struct TypeInfo
     {
-        virtual std::string toString();
-        virtual size_t getHashCode();
+        size_t size = 0;
+        void (*deleter)(void *) = nullptr;
+
+        TypeInfo(size_t size, void (*deleter)(void *)) : size(size), deleter(deleter) {}
+    };
+
+    template <class T> struct Type
+    {
+        static const TypeInfo *getInfo()
+        {
+            static TypeInfo *info = new TypeInfo{sizeof(T), &del};
+            return info;
+        };
+
+      private:
+        static void del(void *object)
+        {
+            auto ptr = reinterpret_cast<T *>(object);
+            delete ptr;
+        }
+    };
+
+    struct ObjectMetadata
+    {
+        bool marked;
+        const TypeInfo *typeInfo;
     };
 
     struct IMemoryManager
@@ -23,14 +52,17 @@ namespace sd
         virtual ~IMemoryManager() {}
     };
 
+    struct IMemoryManagerImpl : public IMemoryManager
+    {
+        virtual void registerObject(void *object, const TypeInfo *typeInfo) = 0;
+    };
+
     class MemoryManager : public IMemoryManager
     {
       private:
-        std::mutex _mutex;
-        std::jthread _runner;
-        std::list<std::shared_ptr<Object>> _hooks;
+        std::unique_ptr<IMemoryManagerImpl> _impl;
 
-        MemoryManager() = default;
+        MemoryManager(std::unique_ptr<IMemoryManagerImpl>);
 
       public:
         MemoryManager(const MemoryManager &) = delete;
@@ -38,11 +70,11 @@ namespace sd
 
         static MemoryManager &instance();
 
-        template <class T, class... Args> std::shared_ptr<T> create(Args &&...args)
+        template <class T, class... Args> T *create(Args &&...params)
         {
-            std::scoped_lock l{_mutex};
-            auto ptr = std::make_shared<T>(std::forward<Args>(args)...);
-            _hooks.push_back(ptr);
+            auto typeInfo = Type<T>::getInfo();
+            auto ptr = new T(std::forward<Args>(params)...);
+            _impl->registerObject(ptr, typeInfo);
             return ptr;
         }
 
@@ -50,4 +82,9 @@ namespace sd
 
         void garbageCollect() override;
     };
+
+    template <class T, class... Args> T *make(Args &&...params)
+    {
+        return MemoryManager::instance().create<T>(std::forward<Args>(params)...);
+    }
 } // namespace sd

@@ -40,39 +40,21 @@ namespace sd
 {
     namespace
     {
-        /**
-         * Frame pointer.
-         */
-        intptr_t *__rbp;
 
-        /**
-         * Stack pointer.
-         */
-        intptr_t *__rsp;
-
-#define __READ_RBP() __asm__ volatile("movq %%rbp, %0" : "=r"(__rbp))
-#define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
+// #define __READ_RBP() __asm__ volatile("movq %%rbp, %0" : "=r"(__rbp))
+#define __READ_RSP(rsp) __asm__ volatile("movq %%rsp, %0" : "=r"(rsp))
 
 #ifdef WINDOWS
-        NT_TIB *getTIB()
-        {
-#ifdef _M_IX86
-            return (NT_TIB *)__readfsdword(0x18);
-#elif _M_AMD64
-            return (NT_TIB *)__readgsqword(0x30);
-#else
-#error unsupported architecture
-#endif
-        }
 
         auto getStackBounds()
         {
-            __READ_RSP();
+            intptr_t *rsp;
+            __READ_RSP(rsp);
             ULONG_PTR lowLimit;
             ULONG_PTR highLimit;
             GetCurrentThreadStackLimits(&lowLimit, &highLimit);
 
-            return std::make_tuple((uint8_t *)highLimit - 10, (uint8_t *)lowLimit, (uint8_t *)__rsp);
+            return std::make_tuple((uint8_t *)highLimit - 10, (uint8_t *)lowLimit, (uint8_t *)rsp);
         }
 
 #endif
@@ -170,8 +152,7 @@ namespace sd
         std::vector<void *> getRoots()
         {
 
-            // Some local variables (roots) can be stored in registers.
-            // Use `setjmp` to push them all onto the stack.
+            // push local variables  stored in registers onto the stack.
             jmp_buf jb;
             setjmp(jb);
 

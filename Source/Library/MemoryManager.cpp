@@ -40,6 +40,7 @@ namespace sd
 {
     namespace
     {
+        const std::thread::id MAIN_THREAD_ID = std::this_thread::get_id();
 
 // #define __READ_RBP() __asm__ volatile("movq %%rbp, %0" : "=r"(__rbp))
 #define __READ_RSP(rsp) __asm__ volatile("movq %%rsp, %0" : "=r"(rsp))
@@ -65,46 +66,50 @@ namespace sd
       private:
         std::unordered_map<void *, ObjectMetadata> _objectsMetadata;
 
-        std::jthread _runner;
-        std::mutex _mutex;
-        std::condition_variable_any _GCWaiter;
-
-        size_t memoryAllocated = 0;
+        size_t _memoryAllocated = 0;
+        size_t _memoryLimit = 1 * 1024 * 1024; // ~1MB
 
       public:
-        void runGCInBackground() final
+        void wipeout() final
         {
-            using namespace std::chrono_literals;
-            _runner = std::jthread{[this](std::stop_token stoken) {
-                while (!stoken.stop_requested())
-                {
-                    std::unique_lock<std::mutex> ul_{_mutex};
-                    _GCWaiter.wait(ul_, []() { return true; });
-                    garbageCollect();
-                }
-            }};
+            // cleanup if running in local threads
+            if (std::this_thread::get_id() == MAIN_THREAD_ID)
+            {
+                return;
+            }
+            auto siz = _objectsMetadata.size();
+            for (auto &item : _objectsMetadata)
+            {
+                auto &[ptr, meta] = item;
+                auto deleter = meta.typeInfo->deleter;
+                (*deleter)(ptr); // (2)
+            }
         }
-
-        void garbageCollect() final
+        size_t garbageCollect() final
         {
+            auto allocatedMemory = _memoryAllocated;
             mark();
             sweep();
+            return allocatedMemory - _memoryAllocated;
         }
 
         void registerObject(void *object, const TypeInfo *typeInfo) final
         {
-            memoryAllocated += typeInfo->size;
+            _memoryAllocated += typeInfo->size;
             _objectsMetadata[object] = {.marked = false, .typeInfo = typeInfo};
-            if (isGBCollectionNeeded())
+            if (!isGBCollectionNeeded())
             {
-                // _GCWaiter.notify_all();
-                // std::lock_guard l{_mutex};
-                garbageCollect();
+                return;
+            }
+            auto freedBytes = garbageCollect();
+            if (!freedBytes)
+            {
+                _memoryLimit *= 2;
             }
         }
 
       private:
-        bool isGBCollectionNeeded() { return memoryAllocated > 2000; }
+        bool isGBCollectionNeeded() { return _memoryAllocated > _memoryLimit; }
 
         void mark()
         {
@@ -141,7 +146,7 @@ namespace sd
                 {
                     auto deleter = meta.typeInfo->deleter;
                     (*deleter)(ptr); // (2)
-                    memoryAllocated -= meta.typeInfo->size;
+                    _memoryAllocated -= meta.typeInfo->size;
                     return true;
                 }
             });
@@ -192,13 +197,12 @@ namespace sd
 
     MemoryManager &MemoryManager::instance()
     {
-        static MemoryManager ob{std::make_unique<MemoryManagerImpl>()};
+        static thread_local MemoryManager ob{std::make_unique<MemoryManagerImpl>()};
         return ob;
     }
 
     MemoryManager::MemoryManager(std::unique_ptr<IMemoryManagerImpl> impl) : _impl(std::move(impl)) {}
 
-    void MemoryManager::runGCInBackground() { _impl->runGCInBackground(); }
-
-    void MemoryManager::garbageCollect() { _impl->garbageCollect(); }
+    size_t MemoryManager::garbageCollect() { return _impl->garbageCollect(); }
+    void MemoryManager::wipeout() { return _impl->wipeout(); }
 } // namespace sd

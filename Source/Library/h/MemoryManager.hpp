@@ -46,8 +46,8 @@ namespace sd
 
     struct IMemoryManager
     {
-        virtual void runGCInBackground() = 0;
-        virtual void garbageCollect() = 0;
+        virtual size_t garbageCollect() = 0;
+        virtual void wipeout() = 0;
 
         virtual ~IMemoryManager() {}
     };
@@ -67,9 +67,15 @@ namespace sd
       public:
         MemoryManager(const MemoryManager &) = delete;
         MemoryManager &operator=(const MemoryManager &) = delete;
-
+        /**
+         * Get Memory Manager singeleton instance, note that each thread has its own memory manager
+         */
         static MemoryManager &instance();
 
+        /**
+         * Get Pointner to newly created menagable object,
+         * if object wont be recheable in stack scope it will be collected
+         */
         template <class T, class... Args> T *create(Args &&...params)
         {
             auto typeInfo = Type<T>::getInfo();
@@ -78,9 +84,12 @@ namespace sd
             return ptr;
         }
 
-        void runGCInBackground() override;
+        /**
+         * Runs manually garbage collection, returns bytes freed during this collection
+         */
+        size_t garbageCollect() override;
 
-        void garbageCollect() override;
+        void wipeout() override;
     };
 
     template <class T, class... Args> T *make(Args &&...params)

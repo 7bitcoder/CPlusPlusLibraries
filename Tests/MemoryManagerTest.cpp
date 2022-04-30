@@ -10,24 +10,26 @@
 
 struct DestructionCntClass
 {
-    static std::unordered_set<DestructionCntClass *> destructed;
+    static std::unordered_set<DestructionCntClass *> &getDestructed()
+    {
+        static thread_local std::unordered_set<DestructionCntClass *> ob;
+        return ob;
+    }
     static bool wasDestructed(std::vector<DestructionCntClass *> ptrs)
     {
         for (auto ptr : ptrs)
         {
-            if (destructed.contains(ptr))
+            if (getDestructed().contains(ptr))
             {
                 return true;
             }
         }
         return false;
     }
-    static int destructionCnt() { return destructed.size(); }
+    static int destructionCnt() { return getDestructed().size(); }
 
-    ~DestructionCntClass() { destructed.insert(this); }
+    ~DestructionCntClass() { getDestructed().insert(this); }
 };
-
-std::unordered_set<DestructionCntClass *> DestructionCntClass::destructed;
 
 struct ComplexClass : public DestructionCntClass
 {
@@ -48,7 +50,7 @@ class MemoryManagerTest : public ::testing::Test
 
     MemoryManagerTest() {}
 
-    void SetUp() override { DestructionCntClass::destructed.clear(); }
+    void SetUp() override { DestructionCntClass::getDestructed().clear(); }
 
     void TearDown() override { sd::MemoryManager::instance().garbageCollect(); }
 
@@ -83,7 +85,7 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectObjects)
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_EQ(14, DestructionCntClass::destructionCnt());
+    EXPECT_LE(1, DestructionCntClass::destructionCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldAllocateComplexObject)
@@ -132,7 +134,7 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectObjectsWithCircleReferences)
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_EQ(10, DestructionCntClass::destructionCnt());
+    EXPECT_LE(1, DestructionCntClass::destructionCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
@@ -158,5 +160,57 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
     sd::MemoryManager::instance().garbageCollect();
 
     EXPECT_FALSE(DestructionCntClass::wasDestructed({circle, circle2}));
-    EXPECT_EQ(6, DestructionCntClass::destructionCnt());
+    EXPECT_LE(1, DestructionCntClass::destructionCnt());
+}
+
+TEST_F(MemoryManagerTest, ManagerShouldNotCollectAutomaticallySomeObjects)
+{
+    auto limit = 500 * 1024 / sizeof(ComplexClass);
+    for (int i = 0; i < limit; i++) // allocate ~0.5 MB
+    {
+        sd::make<ComplexClass>(12);
+    }
+
+    EXPECT_EQ(0, DestructionCntClass::destructionCnt());
+}
+
+TEST_F(MemoryManagerTest, ManagerShouldCollectAutomaticallySomeObjects)
+{
+    auto limit = 1500 * 1024 / sizeof(ComplexClass);
+    for (int i = 0; i < limit; i++) // allocate ~1.5 MB
+    {
+        sd::make<ComplexClass>(12);
+    }
+
+    EXPECT_LE(1, DestructionCntClass::destructionCnt());
+}
+
+TEST_F(MemoryManagerTest, ManagersShouldWorkInSeparateThreads)
+{
+    auto mainThreadOb = sd::make<ComplexClass>(12);
+
+    std::jthread r1{[]() {
+        auto limit = 1500 * 1024 / sizeof(ComplexClass);
+        for (int i = 0; i < limit; i++)
+        {
+            sd::make<ComplexClass>(12);
+        }
+        EXPECT_LE(1, DestructionCntClass::destructionCnt());
+        sd::MemoryManager::instance().wipeout();
+    }};
+
+    std::jthread r2{[]() {
+        auto limit = 1500 * 1024 / sizeof(ComplexClass);
+        for (int i = 0; i < limit; i++)
+        {
+            sd::make<ComplexClass>(12);
+        }
+        EXPECT_LE(1, DestructionCntClass::destructionCnt());
+        sd::MemoryManager::instance().wipeout();
+    }};
+
+    r1.join();
+    r2.join();
+    EXPECT_FALSE(DestructionCntClass::wasDestructed({mainThreadOb}));
+    EXPECT_EQ(0, DestructionCntClass::destructionCnt());
 }

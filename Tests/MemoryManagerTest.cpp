@@ -11,47 +11,40 @@
 struct ExampleClass
 {
     ExampleClass *ptr = nullptr;
-    std::unordered_set<ExampleClass *> &destructorCnt;
+    std::unordered_set<ExampleClass *> &destSet;
 
-    ExampleClass(std::unordered_set<ExampleClass *> &destructorCnt, ExampleClass *ptr = nullptr)
-        : ptr(ptr), destructorCnt(destructorCnt)
-    {
-    }
-
-    ~ExampleClass() { destructorCnt.insert(this); }
+    ExampleClass(std::unordered_set<ExampleClass *> &dest, ExampleClass *ptr = nullptr) : ptr(ptr), destSet(dest) {}
+    ~ExampleClass() { destSet.insert(this); }
 };
 
 class MemoryManagerTest : public ::testing::Test
 {
   protected:
-    std::unordered_set<ExampleClass *> destructorSet;
+    static std::unordered_set<ExampleClass *> &getDestructorSet()
+    {
+        static std::unordered_set<ExampleClass *> ob;
+        return ob;
+    }
 
-    static void SetUpTestSuite() {}
-
-    MemoryManagerTest() {}
-
-    void SetUp() override { destructorSet.clear(); }
+    void SetUp() override { getDestructorSet().clear(); }
 
     void TearDown() override { sd::MemoryManager::instance().garbageCollect(); }
-
-    ~MemoryManagerTest() {}
-
-    static void TearDownTestSuite() {}
 
     bool wasDestructed(std::vector<ExampleClass *> ptrs)
     {
         for (auto ptr : ptrs)
         {
-            if (destructorSet.contains(ptr))
+            if (getDestructorSet().contains(ptr))
             {
                 return true;
             }
         }
         return false;
     }
-    int destructionCnt() { return destructorSet.size(); }
 
-    ExampleClass *make(ExampleClass *ptr = nullptr) { return sd::make<ExampleClass>(destructorSet, ptr); }
+    int destructionCnt() { return getDestructorSet().size(); }
+
+    ExampleClass *make(ExampleClass *ptr = nullptr) { return sd::make<ExampleClass>(getDestructorSet(), ptr); }
 };
 
 TEST_F(MemoryManagerTest, ManagerShouldAllocateObject)

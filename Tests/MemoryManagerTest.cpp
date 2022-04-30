@@ -12,7 +12,7 @@ struct DestructionCntClass
 {
     static std::unordered_set<DestructionCntClass *> &getDestructed()
     {
-        static thread_local std::unordered_set<DestructionCntClass *> ob;
+        static std::unordered_set<DestructionCntClass *> ob;
         return ob;
     }
     static bool wasDestructed(std::vector<DestructionCntClass *> ptrs)
@@ -41,6 +41,14 @@ struct CirceClass : public DestructionCntClass
 {
     DestructionCntClass *a = nullptr;
     CirceClass(DestructionCntClass *a) { this->a = a; }
+};
+
+struct ThreadClass
+{
+    std::unordered_set<ThreadClass *> &destructorCnt;
+    ThreadClass(std::unordered_set<ThreadClass *> &a) : destructorCnt(a) {}
+
+    ~ThreadClass() { destructorCnt.insert(this); }
 };
 
 class MemoryManagerTest : public ::testing::Test
@@ -189,24 +197,25 @@ TEST_F(MemoryManagerTest, ManagersShouldWorkInSeparateThreads)
 {
     auto mainThreadOb = sd::make<ComplexClass>(12);
 
-    std::jthread r1{[]() {
+    std::unordered_set<ThreadClass *> destructorR1;
+    std::unordered_set<ThreadClass *> destructorR2;
+
+    std::jthread r1{[&]() {
         auto limit = 1500 * 1024 / sizeof(ComplexClass);
         for (int i = 0; i < limit; i++)
         {
-            sd::make<ComplexClass>(12);
+            sd::make<ThreadClass>(destructorR1);
         }
-        EXPECT_LE(1, DestructionCntClass::destructionCnt());
-        sd::MemoryManager::instance().wipeout();
+        EXPECT_LE(1, destructorR1.size());
     }};
 
-    std::jthread r2{[]() {
+    std::jthread r2{[&]() {
         auto limit = 1500 * 1024 / sizeof(ComplexClass);
         for (int i = 0; i < limit; i++)
         {
-            sd::make<ComplexClass>(12);
+            sd::make<ThreadClass>(destructorR2);
         }
-        EXPECT_LE(1, DestructionCntClass::destructionCnt());
-        sd::MemoryManager::instance().wipeout();
+        EXPECT_LE(1, destructorR1.size());
     }};
 
     r1.join();

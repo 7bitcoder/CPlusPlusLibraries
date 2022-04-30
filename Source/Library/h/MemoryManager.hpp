@@ -47,7 +47,6 @@ namespace sd
     struct IMemoryManager
     {
         virtual size_t garbageCollect() = 0;
-        virtual void wipeout() = 0;
 
         virtual ~IMemoryManager() {}
     };
@@ -88,8 +87,6 @@ namespace sd
          * Runs manually garbage collection, returns bytes freed during this collection
          */
         size_t garbageCollect() override;
-
-        void wipeout() override;
     };
 
     template <class T, class... Args> T *make(Args &&...params)

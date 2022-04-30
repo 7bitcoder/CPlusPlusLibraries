@@ -70,14 +70,17 @@ namespace sd
         size_t _memoryLimit = 1 * 1024 * 1024; // ~1MB
 
       public:
-        void wipeout() final
+        ~MemoryManagerImpl()
         {
             // cleanup if running in local threads
-            if (std::this_thread::get_id() == MAIN_THREAD_ID)
+            if (std::this_thread::get_id() != MAIN_THREAD_ID)
             {
-                return;
+                clear();
             }
-            auto siz = _objectsMetadata.size();
+        }
+
+        void clear()
+        {
             for (auto &item : _objectsMetadata)
             {
                 auto &[ptr, meta] = item;
@@ -85,6 +88,7 @@ namespace sd
                 (*deleter)(ptr); // (2)
             }
         }
+
         size_t garbageCollect() final
         {
             auto allocatedMemory = _memoryAllocated;
@@ -204,5 +208,4 @@ namespace sd
     MemoryManager::MemoryManager(std::unique_ptr<IMemoryManagerImpl> impl) : _impl(std::move(impl)) {}
 
     size_t MemoryManager::garbageCollect() { return _impl->garbageCollect(); }
-    void MemoryManager::wipeout() { return _impl->wipeout(); }
 } // namespace sd

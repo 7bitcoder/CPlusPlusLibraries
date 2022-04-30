@@ -8,218 +8,198 @@
 
 #include "MemoryManager.hpp"
 
-struct DestructionCntClass
+struct ExampleClass
 {
-    static std::unordered_set<DestructionCntClass *> &getDestructed()
+    ExampleClass *ptr = nullptr;
+    std::unordered_set<ExampleClass *> &destructorCnt;
+
+    ExampleClass(std::unordered_set<ExampleClass *> &destructorCnt, ExampleClass *ptr = nullptr)
+        : ptr(ptr), destructorCnt(destructorCnt)
     {
-        static std::unordered_set<DestructionCntClass *> ob;
-        return ob;
     }
-    static bool wasDestructed(std::vector<DestructionCntClass *> ptrs)
-    {
-        for (auto ptr : ptrs)
-        {
-            if (getDestructed().contains(ptr))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-    static int destructionCnt() { return getDestructed().size(); }
 
-    ~DestructionCntClass() { getDestructed().insert(this); }
-};
-
-struct ComplexClass : public DestructionCntClass
-{
-    int a;
-    ComplexClass(int a) : DestructionCntClass() { this->a = a; }
-};
-
-struct CirceClass : public DestructionCntClass
-{
-    DestructionCntClass *a = nullptr;
-    CirceClass(DestructionCntClass *a) { this->a = a; }
-};
-
-struct ThreadClass
-{
-    std::unordered_set<ThreadClass *> &destructorCnt;
-    ThreadClass(std::unordered_set<ThreadClass *> &a) : destructorCnt(a) {}
-
-    ~ThreadClass() { destructorCnt.insert(this); }
+    ~ExampleClass() { destructorCnt.insert(this); }
 };
 
 class MemoryManagerTest : public ::testing::Test
 {
   protected:
+    std::unordered_set<ExampleClass *> destructorSet;
+
     static void SetUpTestSuite() {}
 
     MemoryManagerTest() {}
 
-    void SetUp() override { DestructionCntClass::getDestructed().clear(); }
+    void SetUp() override { destructorSet.clear(); }
 
     void TearDown() override { sd::MemoryManager::instance().garbageCollect(); }
 
     ~MemoryManagerTest() {}
 
     static void TearDownTestSuite() {}
+
+    bool wasDestructed(std::vector<ExampleClass *> ptrs)
+    {
+        for (auto ptr : ptrs)
+        {
+            if (destructorSet.contains(ptr))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    int destructionCnt() { return destructorSet.size(); }
+
+    ExampleClass *make(ExampleClass *ptr = nullptr) { return sd::make<ExampleClass>(destructorSet, ptr); }
 };
 
 TEST_F(MemoryManagerTest, ManagerShouldAllocateObject)
 {
-    auto ptr = sd::make<DestructionCntClass>();
+    auto ptr = make();
 
     EXPECT_NE(nullptr, ptr);
+    EXPECT_EQ(nullptr, ptr->ptr);
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldCollectObjects)
 {
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
-    sd::make<DestructionCntClass>();
+    make();
+    make();
+    make();
+    make();
+    make();
+    make();
+    make();
+    make();
+    make();
+    make();
+    make();
+    make();
+    make();
+    make();
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_LE(1, DestructionCntClass::destructionCnt());
+    EXPECT_LE(1, destructionCnt());
 }
 
-TEST_F(MemoryManagerTest, ManagerShouldAllocateComplexObject)
+TEST_F(MemoryManagerTest, ManagerShouldNotCollectObject)
 {
-    auto ptr = sd::make<ComplexClass>(1);
-
-    EXPECT_NE(nullptr, ptr);
-    EXPECT_EQ(1, ptr->a);
-}
-
-TEST_F(MemoryManagerTest, ManagerShouldNotCollectComplexObject)
-{
-    auto ptr1 = sd::make<ComplexClass>(1);
-    auto ptr2 = sd::make<ComplexClass>(1);
-    auto ptr3 = sd::make<ComplexClass>(1);
-    auto ptr4 = sd::make<ComplexClass>(1);
+    auto ptr1 = make();
+    auto ptr2 = make();
+    auto ptr3 = make();
+    auto ptr4 = make();
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_FALSE(DestructionCntClass::wasDestructed({ptr1, ptr2, ptr3, ptr4}));
+    EXPECT_FALSE(wasDestructed({ptr1, ptr2, ptr3, ptr4}));
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldCollectObjectsWithCircleReferences)
 {
     {
-        auto circle = sd::make<CirceClass>(nullptr);
-        auto circle2 = sd::make<CirceClass>(circle);
-        circle->a = circle2;
+        auto circle = make(nullptr);
+        auto circle2 = make(circle);
+        circle->ptr = circle2;
 
-        circle = sd::make<CirceClass>(nullptr);
-        circle2 = sd::make<CirceClass>(circle);
-        circle->a = circle2;
+        circle = make(nullptr);
+        circle2 = make(circle);
+        circle->ptr = circle2;
 
-        circle = sd::make<CirceClass>(nullptr);
-        circle2 = sd::make<CirceClass>(circle);
-        circle->a = circle2;
+        circle = make(nullptr);
+        circle2 = make(circle);
+        circle->ptr = circle2;
 
-        circle = sd::make<CirceClass>(nullptr);
-        circle2 = sd::make<CirceClass>(circle);
-        circle->a = circle2;
+        circle = make(nullptr);
+        circle2 = make(circle);
+        circle->ptr = circle2;
 
-        circle = sd::make<CirceClass>(nullptr);
-        circle2 = sd::make<CirceClass>(circle);
-        circle->a = circle2;
+        circle = make(nullptr);
+        circle2 = make(circle);
+        circle->ptr = circle2;
     }
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_LE(1, DestructionCntClass::destructionCnt());
+    EXPECT_LE(1, destructionCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
 {
-    auto circle = sd::make<CirceClass>(nullptr);
-    auto circle2 = sd::make<CirceClass>(circle);
-    circle->a = circle2;
+    auto circle = make(nullptr);
+    auto circle2 = make(circle);
+    circle->ptr = circle2;
     {
 
-        auto toRemove = sd::make<CirceClass>(nullptr);
-        auto toRemove2 = sd::make<CirceClass>(toRemove);
-        toRemove->a = toRemove2;
+        auto toRemove = make(nullptr);
+        auto toRemove2 = make(toRemove);
+        toRemove->ptr = toRemove2;
 
-        toRemove = sd::make<CirceClass>(nullptr);
-        toRemove2 = sd::make<CirceClass>(toRemove);
-        toRemove->a = toRemove2;
+        toRemove = make(nullptr);
+        toRemove2 = make(toRemove);
+        toRemove->ptr = toRemove2;
 
-        toRemove = sd::make<CirceClass>(nullptr);
-        toRemove2 = sd::make<CirceClass>(toRemove);
-        toRemove->a = toRemove2;
+        toRemove = make(nullptr);
+        toRemove2 = make(toRemove);
+        toRemove->ptr = toRemove2;
     }
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_FALSE(DestructionCntClass::wasDestructed({circle, circle2}));
-    EXPECT_LE(1, DestructionCntClass::destructionCnt());
+    EXPECT_FALSE(wasDestructed({circle, circle2}));
+    EXPECT_LE(1, destructionCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldNotCollectAutomaticallySomeObjects)
 {
-    auto limit = 500 * 1024 / sizeof(ComplexClass);
+    auto limit = 500 * 1024 / sizeof(ExampleClass);
     for (int i = 0; i < limit; i++) // allocate ~0.5 MB
     {
-        sd::make<ComplexClass>(12);
+        make();
     }
 
-    EXPECT_EQ(0, DestructionCntClass::destructionCnt());
+    EXPECT_EQ(0, destructionCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldCollectAutomaticallySomeObjects)
 {
-    auto limit = 1500 * 1024 / sizeof(ComplexClass);
+    auto limit = 1500 * 1024 / sizeof(ExampleClass);
     for (int i = 0; i < limit; i++) // allocate ~1.5 MB
     {
-        sd::make<ComplexClass>(12);
+        make();
     }
 
-    EXPECT_LE(1, DestructionCntClass::destructionCnt());
+    EXPECT_LE(1, destructionCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagersShouldWorkInSeparateThreads)
 {
-    auto mainThreadOb = sd::make<ComplexClass>(12);
+    auto mainThreadOb = make();
 
-    std::unordered_set<ThreadClass *> destructorR1;
-    std::unordered_set<ThreadClass *> destructorR2;
+    std::unordered_set<ExampleClass *> destructorR1;
+    std::unordered_set<ExampleClass *> destructorR2;
 
     std::jthread r1{[&]() {
-        auto limit = 1500 * 1024 / sizeof(ComplexClass);
+        auto limit = 1500 * 1024 / sizeof(ExampleClass);
         for (int i = 0; i < limit; i++)
         {
-            sd::make<ThreadClass>(destructorR1);
+            sd::make<ExampleClass>(destructorR1);
         }
         EXPECT_LE(1, destructorR1.size());
     }};
 
     std::jthread r2{[&]() {
-        auto limit = 1500 * 1024 / sizeof(ComplexClass);
+        auto limit = 1500 * 1024 / sizeof(ExampleClass);
         for (int i = 0; i < limit; i++)
         {
-            sd::make<ThreadClass>(destructorR2);
+            sd::make<ExampleClass>(destructorR2);
         }
         EXPECT_LE(1, destructorR1.size());
     }};
 
     r1.join();
     r2.join();
-    EXPECT_FALSE(DestructionCntClass::wasDestructed({mainThreadOb}));
-    EXPECT_EQ(0, DestructionCntClass::destructionCnt());
+    EXPECT_FALSE(wasDestructed({mainThreadOb}));
+    EXPECT_EQ(0, destructionCnt());
 }

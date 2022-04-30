@@ -4,25 +4,25 @@
 #include <iostream>
 #include <memory>
 #include <thread>
-#include <unordered_set>
+#include <vector>
 
 #include "MemoryManager.hpp"
 
 struct ExampleClass
 {
     ExampleClass *ptr = nullptr;
-    std::unordered_set<ExampleClass *> &destSet;
+    std::vector<ExampleClass *> &destSet;
 
-    ExampleClass(std::unordered_set<ExampleClass *> &dest, ExampleClass *ptr = nullptr) : ptr(ptr), destSet(dest) {}
-    ~ExampleClass() { destSet.insert(this); }
+    ExampleClass(std::vector<ExampleClass *> &dest, ExampleClass *ptr = nullptr) : ptr(ptr), destSet(dest) {}
+    ~ExampleClass() { destSet.push_back(this); }
 };
 
 class MemoryManagerTest : public ::testing::Test
 {
   protected:
-    static std::unordered_set<ExampleClass *> &getDestructorSet()
+    static std::vector<ExampleClass *> &getDestructorSet()
     {
-        static std::unordered_set<ExampleClass *> ob;
+        static std::vector<ExampleClass *> ob;
         return ob;
     }
 
@@ -34,7 +34,8 @@ class MemoryManagerTest : public ::testing::Test
     {
         for (auto ptr : ptrs)
         {
-            if (getDestructorSet().contains(ptr))
+            auto &v = getDestructorSet();
+            if (std::find(v.begin(), v.end(), ptr) != v.end())
             {
                 return true;
             }
@@ -170,29 +171,26 @@ TEST_F(MemoryManagerTest, ManagersShouldWorkInSeparateThreads)
 {
     auto mainThreadOb = make();
 
-    std::unordered_set<ExampleClass *> destructorR1;
-    std::unordered_set<ExampleClass *> destructorR2;
+    auto limit = 1500 * 1024 / sizeof(ExampleClass);
 
-    std::jthread r1{[&]() {
-        auto limit = 1500 * 1024 / sizeof(ExampleClass);
+    auto runner = [limit](std::vector<ExampleClass *> &destructor) {
         for (int i = 0; i < limit; i++)
         {
-            sd::make<ExampleClass>(destructorR1);
+            sd::make<ExampleClass>(destructor);
         }
-        EXPECT_LE(1, destructorR1.size());
-    }};
+        EXPECT_LE(1, destructor.size());
+    };
 
-    std::jthread r2{[&]() {
-        auto limit = 1500 * 1024 / sizeof(ExampleClass);
-        for (int i = 0; i < limit; i++)
-        {
-            sd::make<ExampleClass>(destructorR2);
-        }
-        EXPECT_LE(1, destructorR1.size());
-    }};
+    std::vector<ExampleClass *> destructorR1;
+    std::vector<ExampleClass *> destructorR2;
+
+    std::jthread r1{runner, std::ref(destructorR1)};
+    std::jthread r2{runner, std::ref(destructorR2)};
 
     r1.join();
     r2.join();
     EXPECT_FALSE(wasDestructed({mainThreadOb}));
+    EXPECT_EQ(limit, destructorR1.size());
+    EXPECT_EQ(limit, destructorR2.size());
     EXPECT_EQ(0, destructionCnt());
 }

@@ -91,10 +91,10 @@ namespace sd
 
         size_t garbageCollect() final
         {
-            auto allocatedMemory = _memoryAllocated;
+            auto snapshot = _memoryAllocated;
             mark();
             sweep();
-            return allocatedMemory - _memoryAllocated;
+            return snapshot - _memoryAllocated;
         }
 
         void registerObject(void *object, const TypeInfo *typeInfo) final

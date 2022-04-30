@@ -89,6 +89,9 @@ namespace sd
         size_t garbageCollect() override;
     };
 
+    /**
+     * Equivalent of sd::MemoryManager::instance().create<T>(args...), but shorter
+     */
     template <class T, class... Args> T *make(Args &&...params)
     {
         return MemoryManager::instance().create<T>(std::forward<Args>(params)...);

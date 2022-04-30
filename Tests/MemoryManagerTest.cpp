@@ -11,30 +11,30 @@
 struct ExampleClass
 {
     ExampleClass *ptr = nullptr;
-    std::vector<ExampleClass *> &destSet;
+    std::vector<ExampleClass *> &collectedObjects;
 
-    ExampleClass(std::vector<ExampleClass *> &dest, ExampleClass *ptr = nullptr) : ptr(ptr), destSet(dest) {}
-    ~ExampleClass() { destSet.push_back(this); }
+    ExampleClass(std::vector<ExampleClass *> &vec, ExampleClass *ptr = nullptr) : ptr(ptr), collectedObjects(vec) {}
+    ~ExampleClass() { collectedObjects.push_back(this); }
 };
 
 class MemoryManagerTest : public ::testing::Test
 {
   protected:
-    static std::vector<ExampleClass *> &getDestructorSet()
+    static std::vector<ExampleClass *> &getCollectedObjects()
     {
         static std::vector<ExampleClass *> ob;
         return ob;
     }
 
-    void SetUp() override { getDestructorSet().clear(); }
+    void SetUp() override { getCollectedObjects().clear(); }
 
     void TearDown() override { sd::MemoryManager::instance().garbageCollect(); }
 
-    bool wasDestructed(std::vector<ExampleClass *> ptrs)
+    bool wasCollected(std::vector<ExampleClass *> ptrs)
     {
         for (auto ptr : ptrs)
         {
-            auto &v = getDestructorSet();
+            auto &v = getCollectedObjects();
             if (std::find(v.begin(), v.end(), ptr) != v.end())
             {
                 return true;
@@ -43,9 +43,9 @@ class MemoryManagerTest : public ::testing::Test
         return false;
     }
 
-    int destructionCnt() { return getDestructorSet().size(); }
+    int collectedCnt() { return getCollectedObjects().size(); }
 
-    ExampleClass *make(ExampleClass *ptr = nullptr) { return sd::make<ExampleClass>(getDestructorSet(), ptr); }
+    ExampleClass *make(ExampleClass *ptr = nullptr) { return sd::make<ExampleClass>(getCollectedObjects(), ptr); }
 };
 
 TEST_F(MemoryManagerTest, ManagerShouldAllocateObject)
@@ -75,7 +75,7 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectObjects)
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_LE(1, destructionCnt());
+    EXPECT_LE(1, collectedCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldNotCollectObject)
@@ -87,7 +87,7 @@ TEST_F(MemoryManagerTest, ManagerShouldNotCollectObject)
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_FALSE(wasDestructed({ptr1, ptr2, ptr3, ptr4}));
+    EXPECT_FALSE(wasCollected({ptr1, ptr2, ptr3, ptr4}));
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldCollectObjectsWithCircleReferences)
@@ -116,7 +116,7 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectObjectsWithCircleReferences)
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_LE(1, destructionCnt());
+    EXPECT_LE(1, collectedCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
@@ -141,8 +141,8 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_FALSE(wasDestructed({circle, circle2}));
-    EXPECT_LE(1, destructionCnt());
+    EXPECT_FALSE(wasCollected({circle, circle2}));
+    EXPECT_LE(1, collectedCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldNotCollectAutomaticallySomeObjects)
@@ -153,7 +153,7 @@ TEST_F(MemoryManagerTest, ManagerShouldNotCollectAutomaticallySomeObjects)
         make();
     }
 
-    EXPECT_EQ(0, destructionCnt());
+    EXPECT_EQ(0, collectedCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldCollectAutomaticallySomeObjects)
@@ -164,7 +164,7 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectAutomaticallySomeObjects)
         make();
     }
 
-    EXPECT_LE(1, destructionCnt());
+    EXPECT_LE(1, collectedCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagersShouldWorkInSeparateThreads)
@@ -189,8 +189,8 @@ TEST_F(MemoryManagerTest, ManagersShouldWorkInSeparateThreads)
 
     r1.join();
     r2.join();
-    EXPECT_FALSE(wasDestructed({mainThreadOb}));
+    EXPECT_FALSE(wasCollected({mainThreadOb}));
     EXPECT_EQ(limit, destructorR1.size());
     EXPECT_EQ(limit, destructorR2.size());
-    EXPECT_EQ(0, destructionCnt());
+    EXPECT_EQ(0, collectedCnt());
 }

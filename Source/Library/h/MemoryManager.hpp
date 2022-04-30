@@ -68,7 +68,7 @@ namespace sd
         MemoryManager(const MemoryManager &) = delete;
         MemoryManager &operator=(const MemoryManager &) = delete;
 
-        [[gnu::noinline]] static MemoryManager &instance();
+        static MemoryManager &instance();
 
         template <class T, class... Args> T *create(Args &&...params)
         {
@@ -83,7 +83,7 @@ namespace sd
         void garbageCollect() override;
     };
 
-    template <class T, class... Args> inline T *make(Args &&...params)
+    template <class T, class... Args> T *make(Args &&...params)
     {
         return MemoryManager::instance().create<T>(std::forward<Args>(params)...);
     }

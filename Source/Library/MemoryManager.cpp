@@ -6,6 +6,9 @@
 #include <mutex>
 #include <ranges>
 #include <setjmp.h>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
 #include <vcruntime.h>
 
 #include "MemoryManager.hpp"
@@ -62,17 +65,17 @@ namespace sd
 #endif
         }
 
-        std::pair<uint8_t *, uint8_t *> getStackBounds()
+        auto getStackBounds()
         {
             __READ_RSP();
-            PULONG_PTR LowLimit;
-            PULONG_PTR HighLimit;
-            GetCurrentThreadStackLimits(LowLimit, HighLimit);
-            NT_TIB *tib = getTIB();
-            return {(uint8_t *)tib->StackBase, (uint8_t *)__rsp};
-        }
-#endif
+            ULONG_PTR lowLimit;
+            ULONG_PTR highLimit;
+            GetCurrentThreadStackLimits(&lowLimit, &highLimit);
 
+            return std::make_tuple((uint8_t *)highLimit - 10, (uint8_t *)lowLimit, (uint8_t *)__rsp);
+        }
+
+#endif
     } // namespace
 
     class MemoryManagerImpl final : public IMemoryManagerImpl
@@ -85,11 +88,8 @@ namespace sd
         std::condition_variable_any _GCWaiter;
 
         size_t memoryAllocated = 0;
-        void *_stackBegin = nullptr;
 
       public:
-        MemoryManagerImpl(void *stackBegin) : _stackBegin(stackBegin) {}
-
         void runGCInBackground() final
         {
             using namespace std::chrono_literals;
@@ -115,8 +115,8 @@ namespace sd
             _objectsMetadata[object] = {.marked = false, .typeInfo = typeInfo};
             if (isGBCollectionNeeded())
             {
-                //     _GCWaiter.notify_all();
-                //     std::lock_guard l{_mutex};
+                // _GCWaiter.notify_all();
+                // std::lock_guard l{_mutex};
                 garbageCollect();
             }
         }
@@ -175,25 +175,15 @@ namespace sd
             jmp_buf jb;
             setjmp(jb);
 
-            // auto [top, rsp] = getStackBounds();
-
-            __READ_RSP();
-            auto rsp = (uint8_t *)__rsp;
-            auto top = (uint8_t *)_stackBegin;
+            auto [top, bot, rsp] = getStackBounds();
 
             std::vector<void *> result;
             while (rsp < top)
             {
-                try
+                auto address = (void *)*reinterpret_cast<void **>(rsp);
+                if (_objectsMetadata.contains(address))
                 {
-                    auto address = (void *)*(uintptr_t *)rsp;
-                    if (_objectsMetadata.contains(address))
-                    {
-                        result.emplace_back(address);
-                    }
-                }
-                catch (...)
-                {
+                    result.emplace_back(address);
                 }
                 rsp++;
             }
@@ -208,7 +198,7 @@ namespace sd
             std::vector<void *> result;
             while (p < end)
             {
-                auto address = (void *)*(uintptr_t *)p;
+                auto address = (void *)*reinterpret_cast<void **>(p);
                 if (_objectsMetadata.contains(address))
                 {
                     result.emplace_back(address);
@@ -221,7 +211,7 @@ namespace sd
 
     MemoryManager &MemoryManager::instance()
     {
-        static MemoryManager ob{std::make_unique<MemoryManagerImpl>(__builtin_frame_address(4))};
+        static MemoryManager ob{std::make_unique<MemoryManagerImpl>()};
         return ob;
     }
 
@@ -230,5 +220,4 @@ namespace sd
     void MemoryManager::runGCInBackground() { _impl->runGCInBackground(); }
 
     void MemoryManager::garbageCollect() { _impl->garbageCollect(); }
-
 } // namespace sd

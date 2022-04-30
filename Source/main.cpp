@@ -1,12 +1,8 @@
 #include <iostream>
+#include <unordered_set>
 
 #include "LinkedList.hpp"
 #include "Map.hpp"
+#include "MemoryManager.hpp"
 
-using namespace sd;
-
-int main(int, char **)
-{
-    // linkedMain();
-    mapMain();
-}
+int main(int, char **) { return 0; }

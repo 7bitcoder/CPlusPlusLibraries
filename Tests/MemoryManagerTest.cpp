@@ -64,7 +64,7 @@ TEST_F(MemoryManagerTest, ManagerShouldAllocateObject)
     EXPECT_NE(nullptr, ptr);
 }
 
-TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
+TEST_F(MemoryManagerTest, ManagerShouldCollectObjects)
 {
     sd::make<DestructionCntClass>();
     sd::make<DestructionCntClass>();
@@ -80,9 +80,10 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
     sd::make<DestructionCntClass>();
     sd::make<DestructionCntClass>();
     sd::make<DestructionCntClass>();
+
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_LE(1, DestructionCntClass::destructionCnt());
+    EXPECT_EQ(14, DestructionCntClass::destructionCnt());
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldAllocateComplexObject)
@@ -105,7 +106,7 @@ TEST_F(MemoryManagerTest, ManagerShouldNotCollectComplexObject)
     EXPECT_FALSE(DestructionCntClass::wasDestructed({ptr1, ptr2, ptr3, ptr4}));
 }
 
-TEST_F(MemoryManagerTest, ManagerShouldCollectCircleReferences)
+TEST_F(MemoryManagerTest, ManagerShouldCollectObjectsWithCircleReferences)
 {
     {
         auto circle = sd::make<CirceClass>(nullptr);
@@ -131,5 +132,31 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectCircleReferences)
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_LE(2, DestructionCntClass::destructionCnt());
+    EXPECT_EQ(10, DestructionCntClass::destructionCnt());
+}
+
+TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
+{
+    auto circle = sd::make<CirceClass>(nullptr);
+    auto circle2 = sd::make<CirceClass>(circle);
+    circle->a = circle2;
+    {
+
+        auto toRemove = sd::make<CirceClass>(nullptr);
+        auto toRemove2 = sd::make<CirceClass>(toRemove);
+        toRemove->a = toRemove2;
+
+        toRemove = sd::make<CirceClass>(nullptr);
+        toRemove2 = sd::make<CirceClass>(toRemove);
+        toRemove->a = toRemove2;
+
+        toRemove = sd::make<CirceClass>(nullptr);
+        toRemove2 = sd::make<CirceClass>(toRemove);
+        toRemove->a = toRemove2;
+    }
+
+    sd::MemoryManager::instance().garbageCollect();
+
+    EXPECT_FALSE(DestructionCntClass::wasDestructed({circle, circle2}));
+    EXPECT_EQ(6, DestructionCntClass::destructionCnt());
 }

@@ -1,7 +1,7 @@
 #include <setjmp.h>
 
-#include "DetectOs.hpp"
 #include "MemoryManager.hpp"
+#include "DetectOs.hpp"
 
 #ifdef WINDOWS
 
@@ -10,15 +10,9 @@
 #include <processthreadsapi.h>
 
 #endif
-
 #ifdef LINUX
-#include <iostream>
+
 #include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <termios.h>
-#include <unistd.h>
 
 #endif
 
@@ -34,35 +28,34 @@ namespace sd
         {
             intptr_t *rsp;
             __READ_RSP(rsp);
-            return rsp;
+            return (uint8_t *)rsp;
         }
 
-        auto makeStackInfo(uint8_t *top, uint8_t *bot) { return std::make_tuple(top, bot, (uint8_t *)getStackRsp()); }
 #ifdef WINDOWS
 
         auto getStackBounds()
         {
+            auto rsp = getStackRsp();
             ULONG_PTR lowLimit, highLimit;
             GetCurrentThreadStackLimits(&lowLimit, &highLimit);
 
-            return makeStackInfo((uint8_t *)highLimit - 10, (uint8_t *)lowLimit);
+            return std::make_tuple((uint8_t *)highLimit - 10, (uint8_t *)lowLimit, rsp);
         }
-
-#elif LINUX
+#endif
+#ifdef LINUX
 
         auto getStackBounds()
         {
+            auto rsp = getStackRsp();
             pthread_attr_t attrs;
             pthread_getattr_np(pthread_self(), &attrs);
             void *stack_ptr;
             size_t stack_size;
             pthread_attr_getstack(&attrs, &stack_ptr, &stack_size);
-            void *lowLimit = stack_ptr, highLimit = stack_ptr + stack_size - 10;
 
-            return makeStackInfo((uint8_t *)highLimit, (uint8_t *)lowLimit);
+            return std::make_tuple((uint8_t *)stack_ptr + stack_size - 10, (uint8_t *)stack_ptr, rsp);
         }
 #endif
-
     } // namespace
 
     MemoryManager &MemoryManager::instance()

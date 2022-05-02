@@ -1,71 +1,135 @@
 #pragma once
 
 #include "MemoryManager.hpp"
-#include <list>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <typeindex>
-#include <typeinfo>
+#include <algorithm>
 #include <unordered_map>
 #include <vcruntime.h>
 
 namespace sd
 {
-    struct TypeInfo
-    {
-        size_t size = 0;
-        void (*deleter)(void *) = nullptr;
-
-        TypeInfo(size_t size, void (*deleter)(void *)) : size(size), deleter(deleter) {}
-    };
-
-    template <class T> struct Type
-    {
-        static const TypeInfo *getInfo()
-        {
-            static TypeInfo *info = new TypeInfo{sizeof(T), &deleter};
-            return info;
-        };
-
-      private:
-        static void deleter(void *object)
-        {
-            auto ptr = reinterpret_cast<T *>(object);
-            delete ptr;
-        }
-    };
-
-    struct ObjectMetadata
-    {
-        bool marked;
-        const TypeInfo *typeInfo;
-    };
 
     struct IMemoryManager
     {
         virtual size_t garbageCollect() = 0;
+        virtual size_t getAllocatedMemory() const = 0;
 
         virtual ~IMemoryManager() {}
-    };
-
-    struct IMemoryManagerImpl : public IMemoryManager
-    {
-        virtual void registerObject(void *object, const TypeInfo *typeInfo) = 0;
     };
 
     class MemoryManager : public IMemoryManager
     {
       private:
-        std::unique_ptr<IMemoryManagerImpl> _impl;
+        class Object
+        {
+          public:
+            class TypeInfo
+            {
+              private:
+                using Deleter = void (*)(void *);
 
-        MemoryManager(std::unique_ptr<IMemoryManagerImpl>);
+                size_t _size = 0;
+                Deleter _deleter = nullptr;
+
+              public:
+                TypeInfo(size_t size, Deleter deleter) : _size(size), _deleter(deleter) {}
+
+                size_t getSize() const { return _size; }
+                Deleter getDeleter() const { return _deleter; }
+
+              private:
+            };
+
+            template <class T> struct Type
+            {
+                template <class... A> static T *create(A &&...args) { return new T(std::forward<A>(args)...); };
+                static void destroy(void *objectPtr) { delete reinterpret_cast<T *>(objectPtr); }
+                static TypeInfo *getInfo()
+                {
+                    static TypeInfo *info = new TypeInfo{sizeof(T), &destroy};
+                    return info;
+                }
+            };
+
+            class Metadata
+            {
+              private:
+                bool _marked;
+                const TypeInfo *_typeInfo;
+
+              public:
+                Metadata(TypeInfo *typeInfo) : _marked(false), _typeInfo(typeInfo) {}
+                void mark() { _marked = true; }
+                void unmark() { _marked = false; }
+                bool isMarked() const { return _marked; }
+                const TypeInfo *getTypeInfo() const { return _typeInfo; }
+            };
+
+          private:
+            void *_ptr;
+            Metadata _metadata;
+
+            Object(void *ptr, Metadata metadata) : _ptr(ptr), _metadata(metadata) {}
+
+          public:
+            Object(const Object &) = default;
+            Object &operator=(const Object &) = default;
+
+            template <class T, class... Args> static Object create(Args &&...params)
+            {
+                auto ptr = Type<T>::create(std::forward<Args>(params)...);
+                return Object{ptr, {Type<T>::getInfo()}};
+            };
+
+            void *getRawPtr() const { return _ptr; }
+            Metadata &getMetadata() { return _metadata; }
+            const Metadata &getMetadata() const { return _metadata; }
+            const TypeInfo *getTypeInfo() const { return getMetadata().getTypeInfo(); }
+
+            size_t getSize() const { return getTypeInfo()->getSize(); }
+            bool isMarked() const { return getMetadata().isMarked(); }
+            void mark() { getMetadata().mark(); }
+            void unmark() { getMetadata().unmark(); }
+
+            void destroy() { (*getTypeInfo()->getDeleter())(getRawPtr()); }
+
+          private:
+        };
+
+        class ObjectsRegister
+        {
+          private:
+            std::unordered_map<void *, Object> _objectsMap;
+
+          public:
+            void registerNew(const Object &object);
+            bool contains(void *objectPtr) const;
+            void clear();
+            Object &getObject(void *objectPtr);
+
+            size_t numberOfRegisteredObjects() const;
+            bool anyObjectRegistered() const;
+
+            template <class Fn> void unregisterIf(Fn predicate)
+            {
+                std::erase_if(_objectsMap, [&](auto &pair) { return predicate(pair.second); });
+            }
+            template <class Fn> void forEach(Fn predicate)
+            {
+                std::for_each(_objectsMap.begin(), _objectsMap.end(),
+                              [&](auto &pair) { return predicate(pair.second); });
+            }
+        } _register;
+
+        size_t _allocatedMemory = 0;
+        size_t _memoryLimit = 1 * 1024 * 1024; // ~1MB
+
+        MemoryManager() = default;
 
       public:
+        ~MemoryManager();
         MemoryManager(const MemoryManager &) = delete;
         MemoryManager &operator=(const MemoryManager &) = delete;
+
         /**
          * Get Memory Manager singeleton instance, note that each thread has its own memory manager
          */
@@ -77,16 +141,43 @@ namespace sd
          */
         template <class T, class... Args> T *create(Args &&...params)
         {
-            auto typeInfo = Type<T>::getInfo();
-            auto ptr = new T(std::forward<Args>(params)...);
-            _impl->registerObject(ptr, typeInfo);
-            return ptr;
+            auto object = Object::create<T>(std::forward<Args>(params)...);
+            _allocatedMemory += object.getSize();
+            _register.registerNew(object);
+            if (isGBCollectionNeeded())
+            {
+                garbageCollect();
+            }
+            if (isGBCollectionNeeded())
+            {
+                bumpMemoryLimit();
+            }
+            return reinterpret_cast<T *>(object.getRawPtr());
         }
 
         /**
          * Runs manually garbage collection, returns bytes freed during this collection
          */
         size_t garbageCollect() override;
+
+        /**
+         * Get number of bytes currently allocated by memory manager.
+         */
+        size_t getAllocatedMemory() const override;
+
+      private:
+        void destroy(Object &object);
+        void clear();
+
+        bool isGBCollectionNeeded();
+        void mark();
+        void sweep();
+
+        std::vector<void *> getRoots();
+        std::vector<void *> getInnerObjects(const Object &object);
+
+        size_t getMemoryLimit() const;
+        void bumpMemoryLimit();
     };
 
     /**

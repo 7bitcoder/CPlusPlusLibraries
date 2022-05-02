@@ -1,23 +1,10 @@
-#include <chrono>
-#include <condition_variable>
-#include <format>
-#include <functional>
-#include <memory>
-#include <mutex>
-#include <ranges>
 #include <setjmp.h>
-#include <tuple>
-#include <unordered_map>
-#include <utility>
-#include <vcruntime.h>
 
 #include "MemoryManager.hpp"
 
 #ifdef _WIN32
-#include <stdio.h>
-#include <tchar.h>
+
 #include <windows.h>
-#include <winuser.h>
 
 #include <processthreadsapi.h>
 
@@ -40,7 +27,6 @@ namespace sd
 {
     namespace
     {
-        const std::thread::id MAIN_THREAD_ID = std::this_thread::get_id();
 
 // #define __READ_RBP() __asm__ volatile("movq %%rbp, %0" : "=r"(__rbp))
 #define __READ_RSP(rsp) __asm__ volatile("movq %%rsp, %0" : "=r"(rsp))
@@ -61,151 +47,137 @@ namespace sd
 #endif
     } // namespace
 
-    class MemoryManagerImpl final : public IMemoryManagerImpl
+    void MemoryManager::ObjectsRegister::registerNew(const Object &object)
     {
-      private:
-        std::unordered_map<void *, ObjectMetadata> _objectsMetadata;
+        _objectsMap.insert({object.getRawPtr(), object});
+    }
 
-        size_t _memoryAllocated = 0;
-        size_t _memoryLimit = 1 * 1024 * 1024; // ~1MB
+    bool MemoryManager::ObjectsRegister::contains(void *objectPtr) const { return _objectsMap.contains(objectPtr); }
 
-      public:
-        ~MemoryManagerImpl()
-        {
-            // cleanup if running in local threads
-            if (std::this_thread::get_id() != MAIN_THREAD_ID)
-            {
-                clear();
-            }
-        }
+    MemoryManager::Object &MemoryManager::ObjectsRegister::getObject(void *objectPtr)
+    {
+        return _objectsMap.at(objectPtr);
+    }
 
-        void clear()
-        {
-            for (auto &item : _objectsMetadata)
-            {
-                auto &[ptr, meta] = item;
-                auto deleter = meta.typeInfo->deleter;
-                (*deleter)(ptr); // (2)
-            }
-        }
+    void MemoryManager::ObjectsRegister::clear() { return _objectsMap.clear(); }
 
-        size_t garbageCollect() final
-        {
-            auto snapshot = _memoryAllocated;
-            mark();
-            sweep();
-            return snapshot - _memoryAllocated;
-        }
+    size_t MemoryManager::ObjectsRegister::numberOfRegisteredObjects() const { return _objectsMap.size(); }
 
-        void registerObject(void *object, const TypeInfo *typeInfo) final
-        {
-            _memoryAllocated += typeInfo->size;
-            _objectsMetadata[object] = {.marked = false, .typeInfo = typeInfo};
-            if (!isGBCollectionNeeded())
-            {
-                return;
-            }
-            auto freedBytes = garbageCollect();
-            if (!freedBytes)
-            {
-                _memoryLimit *= 2;
-            }
-        }
-
-      private:
-        bool isGBCollectionNeeded() { return _memoryAllocated > _memoryLimit; }
-
-        void mark()
-        {
-            auto worklist = getRoots();
-
-            while (!worklist.empty())
-            {
-                auto o = worklist.back();
-                worklist.pop_back();
-                auto &meta = getObjectMetadata(o);
-
-                if (meta.marked)
-                {
-                    continue;
-                }
-                meta.marked = true;
-                for (const auto &p : getInnerObjects(o))
-                {
-                    worklist.push_back(p);
-                }
-            }
-        }
-
-        void sweep()
-        {
-            std::erase_if(_objectsMetadata, [this](auto &item) {
-                auto &[ptr, meta] = item;
-                if (meta.marked)
-                {
-                    meta.marked = false;
-                    return false;
-                }
-                else
-                {
-                    auto deleter = meta.typeInfo->deleter;
-                    (*deleter)(ptr); // (2)
-                    _memoryAllocated -= meta.typeInfo->size;
-                    return true;
-                }
-            });
-        }
-
-        ObjectMetadata &getObjectMetadata(void *object) { return _objectsMetadata.at(object); }
-
-        std::vector<void *> getRoots()
-        {
-
-            // push local variables  stored in registers onto the stack.
-            jmp_buf jb;
-            setjmp(jb);
-
-            auto [top, bot, rsp] = getStackBounds();
-
-            std::vector<void *> result;
-            while (rsp < top)
-            {
-                auto address = (void *)*reinterpret_cast<void **>(rsp);
-                if (_objectsMetadata.contains(address))
-                {
-                    result.emplace_back(address);
-                }
-                rsp++;
-            }
-
-            return result;
-        }
-
-        std::vector<void *> getInnerObjects(void *object)
-        {
-            auto p = (uint8_t *)object;
-            auto end = (p + getObjectMetadata(object).typeInfo->size);
-            std::vector<void *> result;
-            while (p < end)
-            {
-                auto address = (void *)*reinterpret_cast<void **>(p);
-                if (_objectsMetadata.contains(address))
-                {
-                    result.emplace_back(address);
-                }
-                p++;
-            }
-            return result;
-        }
-    };
+    bool MemoryManager::ObjectsRegister::anyObjectRegistered() const { return _objectsMap.empty(); }
 
     MemoryManager &MemoryManager::instance()
     {
-        static thread_local MemoryManager ob{std::make_unique<MemoryManagerImpl>()};
+        static thread_local MemoryManager ob;
         return ob;
     }
 
-    MemoryManager::MemoryManager(std::unique_ptr<IMemoryManagerImpl> impl) : _impl(std::move(impl)) {}
+    MemoryManager::~MemoryManager() { clear(); }
 
-    size_t MemoryManager::garbageCollect() { return _impl->garbageCollect(); }
+    size_t MemoryManager::garbageCollect()
+    {
+        auto snapshot = getAllocatedMemory();
+        mark();
+        sweep();
+        auto freedBytes = snapshot - getAllocatedMemory();
+        return freedBytes;
+    }
+
+    size_t MemoryManager::getAllocatedMemory() const { return _allocatedMemory; }
+
+    size_t MemoryManager::getMemoryLimit() const { return _memoryLimit; }
+
+    void MemoryManager::bumpMemoryLimit() { _memoryLimit *= 2; }
+
+    void MemoryManager::clear()
+    {
+        _register.forEach([this](auto &object) { destroy(object); });
+        _register.clear();
+    }
+
+    void MemoryManager::destroy(Object &object)
+    {
+        auto size = object.getSize();
+        object.destroy();
+        _allocatedMemory -= size;
+    }
+
+    bool MemoryManager::isGBCollectionNeeded() { return getAllocatedMemory() > getMemoryLimit(); }
+
+    void MemoryManager::mark()
+    {
+        auto worklist = getRoots();
+
+        while (!worklist.empty())
+        {
+            auto ptr = worklist.back();
+            worklist.pop_back();
+            auto &object = _register.getObject(ptr);
+
+            if (object.isMarked())
+            {
+                continue;
+            }
+            object.mark();
+            for (const auto &p : getInnerObjects(object))
+            {
+                worklist.push_back(p);
+            }
+        }
+    }
+
+    void MemoryManager::sweep()
+    {
+        _register.unregisterIf([this](auto &object) {
+            if (object.isMarked())
+            {
+                object.unmark();
+                return false;
+            }
+            else
+            {
+                destroy(object);
+                return true;
+            }
+        });
+    }
+
+    std::vector<void *> MemoryManager::getRoots()
+    {
+
+        // push local variables  stored in registers onto the stack.
+        jmp_buf jb;
+        setjmp(jb);
+
+        auto [top, bot, rsp] = getStackBounds();
+
+        std::vector<void *> result;
+        while (rsp < top)
+        {
+            auto address = (void *)*reinterpret_cast<void **>(rsp);
+            if (_register.contains(address))
+            {
+                result.emplace_back(address);
+            }
+            rsp++;
+        }
+
+        return result;
+    }
+
+    std::vector<void *> MemoryManager::getInnerObjects(const Object &object)
+    {
+        auto p = (uint8_t *)object.getRawPtr();
+        auto end = (p + object.getSize());
+        std::vector<void *> result;
+        while (p < end)
+        {
+            auto address = (void *)*reinterpret_cast<void **>(p);
+            if (_register.contains(address))
+            {
+                result.emplace_back(address);
+            }
+            p++;
+        }
+        return result;
+    }
 } // namespace sd

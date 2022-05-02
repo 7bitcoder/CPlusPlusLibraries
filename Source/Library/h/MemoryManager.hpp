@@ -3,7 +3,6 @@
 #include "MemoryManager.hpp"
 #include <algorithm>
 #include <unordered_map>
-#include <vcruntime.h>
 
 namespace sd
 {

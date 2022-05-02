@@ -1,5 +1,10 @@
-#include "Date.hpp"
 #include <chrono>
+#include "DetectOs.hpp"
+
+// skip for linux for now, c++20 must be fully implemented for clang - linux
+#ifdef WINDOWS
+
+#include "Date.hpp"
 #include <format>
 
 namespace sd
@@ -292,3 +297,5 @@ namespace sd
     Months operator"" _mo(unsigned long long months) { return Months(static_cast<int>(months)); }
 
 } // namespace sd
+
+#endif

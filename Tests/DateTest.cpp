@@ -3,7 +3,9 @@
 #include <iostream>
 #include <stdexcept>
 #include <thread>
+#include "DetectOs.hpp"
 
+#ifdef WINDOWS
 #include "Date.hpp"
 
 using namespace sd;
@@ -1033,3 +1035,5 @@ TEST_F(DateTest, TryParseHoursAndMinutesSuccessTest)
 }
 
 #pragma endregion
+
+#endif

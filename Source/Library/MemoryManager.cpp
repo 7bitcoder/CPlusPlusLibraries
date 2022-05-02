@@ -1,17 +1,17 @@
 #include <setjmp.h>
 
 #include "MemoryManager.hpp"
+#include "DetectOs.hpp"
 
-#ifdef _WIN32
+#ifdef WINDOWS
 
 #include <windows.h>
 
 #include <processthreadsapi.h>
 
-#define WINDOWS
 #endif
 
-#ifdef linux
+#ifdef LINUX
 
 #include <iostream>
 #include <stdio.h>
@@ -20,7 +20,6 @@
 #include <termios.h>
 #include <unistd.h>
 
-#define LINUX
 #endif
 
 namespace sd
@@ -28,7 +27,7 @@ namespace sd
     namespace
     {
 
-// #define __READ_RBP() __asm__ volatile("movq %%rbp, %0" : "=r"(__rbp))
+#define __READ_RBP(rbp) __asm__ volatile("movq %%rbp, %0" : "=r"(rbp))
 #define __READ_RSP(rsp) __asm__ volatile("movq %%rsp, %0" : "=r"(rsp))
 
 #ifdef WINDOWS
@@ -45,6 +44,17 @@ namespace sd
         }
 
 #endif
+#ifdef LINUX
+ auto getStackBounds()
+        {
+            intptr_t *rsp, rbp;
+            __READ_RSP(rsp);
+            __READ_RBP(rbp);
+            return std::make_tuple((uint8_t *)rbp , (uint8_t *)rsp, (uint8_t *)rsp);
+        }
+
+#endif
+
     } // namespace
 
     MemoryManager &MemoryManager::instance()

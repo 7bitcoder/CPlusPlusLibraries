@@ -2,7 +2,9 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <thread>
+#include "DetectOs.hpp"
 
+#ifdef WINDOWS
 #include "Date.hpp"
 
 using namespace sd;
@@ -672,3 +674,4 @@ TEST_F(TimeTest, ParseHoursAndMinutesTest)
 }
 
 #pragma endregion
+#endif

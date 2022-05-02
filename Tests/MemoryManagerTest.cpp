@@ -1,5 +1,4 @@
 #include <cstddef>
-#include <format>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <memory>
@@ -184,8 +183,8 @@ TEST_F(MemoryManagerTest, ManagersShouldWorkInSeparateThreads)
     std::vector<ExampleClass *> destructorR1;
     std::vector<ExampleClass *> destructorR2;
 
-    std::jthread r1{runner, std::ref(destructorR1)};
-    std::jthread r2{runner, std::ref(destructorR2)};
+    std::thread r1{runner, std::ref(destructorR1)};
+    std::thread r2{runner, std::ref(destructorR2)};
 
     r1.join();
     r2.join();

@@ -1,8 +1,12 @@
 #include "Time.hpp"
 #include <chrono>
 #include <cmath>
-#include <format>
 #include <tuple>
+
+#include "DetectOs.hpp"
+
+#ifdef WINDOWS
+#include <format>
 
 namespace sd
 {
@@ -155,3 +159,4 @@ namespace sd
         return Time::fromMicroseconds(static_cast<long long>(microseconds));
     }
 } // namespace sd
+#endif

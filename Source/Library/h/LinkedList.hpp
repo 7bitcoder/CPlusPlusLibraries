@@ -1,5 +1,4 @@
 #pragma once
-#include <format>
 #include <iostream>
 #include <string>
 
@@ -60,8 +59,10 @@ namespace sd
       public:
         using iterator_category = std::bidirectional_iterator_tag;
         using value_type = T;
-        using pointer = T *;
-        using reference = T &;
+        using pointer = value_type *;
+        using difference_type = std::ptrdiff_t;
+        using const_pointer = const value_type*;
+        using reference = value_type &;
         using NodePtr =
             std::conditional_t<std::is_const<T>::value, const ListNode<std::remove_cv_t<T>> *, ListNode<T> *>;
 

@@ -19,6 +19,7 @@ namespace sd
     class MemoryManager : public IMemoryManager
     {
       private:
+#pragma region HelperClasses
         class Object
         {
           public:
@@ -101,13 +102,13 @@ namespace sd
             std::unordered_map<void *, Object> _objectsMap;
 
           public:
-            void registerNew(const Object &object);
-            bool contains(void *objectPtr) const;
-            void clear();
-            Object &getObject(void *objectPtr);
+            void registerNew(const Object &object) { _objectsMap.insert({object.getRawPtr(), object}); }
+            bool contains(void *objectPtr) const { return _objectsMap.contains(objectPtr); }
+            void clear() { _objectsMap.clear(); }
+            Object &getObject(void *objectPtr) { return _objectsMap.at(objectPtr); }
 
-            size_t numberOfRegisteredObjects() const;
-            bool anyObjectRegistered() const;
+            size_t numberOfRegisteredObjects() const { return _objectsMap.size(); }
+            bool anyObjectRegistered() const { return _objectsMap.empty(); }
 
             template <class Fn> void unregisterIf(Fn predicate)
             {
@@ -118,7 +119,10 @@ namespace sd
                 std::for_each(_objectsMap.begin(), _objectsMap.end(),
                               [&](auto &pair) { return predicate(pair.second); });
             }
-        } _register;
+        };
+#pragma endregion
+
+        ObjectsRegister _register;
 
         size_t _allocatedMemory = 0;
         size_t _memoryLimit = 1 * 1024 * 1024; // ~1MB

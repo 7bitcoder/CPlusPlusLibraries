@@ -47,24 +47,6 @@ namespace sd
 #endif
     } // namespace
 
-    void MemoryManager::ObjectsRegister::registerNew(const Object &object)
-    {
-        _objectsMap.insert({object.getRawPtr(), object});
-    }
-
-    bool MemoryManager::ObjectsRegister::contains(void *objectPtr) const { return _objectsMap.contains(objectPtr); }
-
-    MemoryManager::Object &MemoryManager::ObjectsRegister::getObject(void *objectPtr)
-    {
-        return _objectsMap.at(objectPtr);
-    }
-
-    void MemoryManager::ObjectsRegister::clear() { return _objectsMap.clear(); }
-
-    size_t MemoryManager::ObjectsRegister::numberOfRegisteredObjects() const { return _objectsMap.size(); }
-
-    bool MemoryManager::ObjectsRegister::anyObjectRegistered() const { return _objectsMap.empty(); }
-
     MemoryManager &MemoryManager::instance()
     {
         static thread_local MemoryManager ob;

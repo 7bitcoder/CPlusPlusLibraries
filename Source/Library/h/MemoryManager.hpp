@@ -35,14 +35,14 @@ namespace sd
 
                 size_t getSize() const { return _size; }
                 Deleter getDeleter() const { return _deleter; }
-
-              private:
             };
 
             template <class T> struct Type
             {
                 template <class... A> static T *create(A &&...args) { return new T(std::forward<A>(args)...); };
+
                 static void destroy(void *objectPtr) { delete reinterpret_cast<T *>(objectPtr); }
+
                 static TypeInfo *getInfo()
                 {
                     static TypeInfo *info = new TypeInfo{sizeof(T), &destroy};
@@ -103,8 +103,9 @@ namespace sd
           public:
             void registerNew(const Object &object) { _objectsMap.insert({object.getRawPtr(), object}); }
             bool contains(void *objectPtr) const { return _objectsMap.contains(objectPtr); }
-            void clear() { _objectsMap.clear(); }
             Object &getObject(void *objectPtr) { return _objectsMap.at(objectPtr); }
+
+            void clear() { _objectsMap.clear(); }
 
             size_t numberOfRegisteredObjects() const { return _objectsMap.size(); }
             bool anyObjectRegistered() const { return _objectsMap.empty(); }

@@ -12,13 +12,13 @@
 #endif
 
 #ifdef LINUX
-
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #endif
 
@@ -45,12 +45,17 @@ namespace sd
 
 #endif
 #ifdef LINUX
- auto getStackBounds()
+
+        auto getStackBounds()
         {
-            intptr_t *rsp, rbp;
+            intptr_t *rsp;
             __READ_RSP(rsp);
-            __READ_RBP(rbp);
-            return std::make_tuple((uint8_t *)rbp , (uint8_t *)rsp, (uint8_t *)rsp);
+            pthread_attr_t attrs;
+            pthread_getattr_np(pthread_self(), &attrs);
+            void* stack_ptr;
+            size_t stack_size;
+            pthread_attr_getstack(&attrs, &stack_ptr, &stack_size);
+            return std::make_tuple((uint8_t *)stack_ptr + stack_size - 10, (uint8_t *)rsp, (uint8_t *)rsp);
         }
 
 #endif
@@ -135,7 +140,6 @@ namespace sd
 
     std::vector<void *> MemoryManager::getRoots()
     {
-
         // push local variables  stored in registers onto the stack.
         jmp_buf jb;
         setjmp(jb);

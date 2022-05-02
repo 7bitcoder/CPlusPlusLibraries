@@ -1,9 +1,9 @@
 #include "Time.hpp"
+#include "DetectOs.hpp"
 #include <chrono>
 #include <cmath>
 #include <tuple>
 
-#include "DetectOs.hpp"
 
 #ifdef WINDOWS
 #include <format>

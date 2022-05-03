@@ -1,6 +1,5 @@
 #pragma once
 
-#include "MemoryManager.hpp"
 #include <algorithm>
 #include <unordered_map>
 
@@ -71,8 +70,9 @@ namespace sd
             Object(void *ptr, Metadata metadata) : _ptr(ptr), _metadata(metadata) {}
 
           public:
-            Object(const Object &) = default;
-            Object &operator=(const Object &) = default;
+            Object(Object &&other) : _ptr(other._ptr), _metadata(other._metadata) { other._ptr = nullptr; }
+            Object(const Object &) = delete;
+            Object &operator=(const Object &) = delete;
 
             template <class T, class... Args> static Object create(Args &&...params)
             {
@@ -90,8 +90,6 @@ namespace sd
             void unmark() { getMetadata().unmark(); }
 
             void destroy() { (*getTypeInfo()->getDeleter())(getRawPtr()); }
-
-          private:
         };
 
         class ObjectsRegister
@@ -100,7 +98,7 @@ namespace sd
             std::unordered_map<void *, Object> _objectsMap;
 
           public:
-            void registerNew(const Object &object) { _objectsMap.insert({object.getRawPtr(), object}); }
+            void registerNew(Object &&object) { _objectsMap.insert({object.getRawPtr(), std::move(object)}); }
             bool contains(void *objectPtr) const { return _objectsMap.contains(objectPtr); }
             Object &getObject(void *objectPtr) { return _objectsMap.at(objectPtr); }
 
@@ -109,14 +107,13 @@ namespace sd
             size_t numberOfRegisteredObjects() const { return _objectsMap.size(); }
             bool anyObjectRegistered() const { return _objectsMap.empty(); }
 
-            template <class Fn> void unregisterIf(Fn predicate)
+            template <class Fn> void unregisterIf(Fn func)
             {
-                std::erase_if(_objectsMap, [&](auto &pair) { return predicate(pair.second); });
+                std::erase_if(_objectsMap, [&](auto &pair) -> bool { return func(pair.second); });
             }
-            template <class Fn> void forEach(Fn predicate)
+            template <class Fn> void forEach(Fn func)
             {
-                std::for_each(_objectsMap.begin(), _objectsMap.end(),
-                              [&](auto &pair) { return predicate(pair.second); });
+                std::for_each(_objectsMap.begin(), _objectsMap.end(), [&](auto &pair) { func(pair.second); });
             }
         };
 #pragma endregion
@@ -145,8 +142,9 @@ namespace sd
         template <class T, class... Args> T *create(Args &&...params)
         {
             auto object = Object::create<T>(std::forward<Args>(params)...);
+            auto ptr = reinterpret_cast<T *>(object.getRawPtr());
             _allocatedMemory += object.getSize();
-            _objectRegister.registerNew(object);
+            _objectRegister.registerNew(std::move(object));
             if (isGBCollectionNeeded())
             {
                 garbageCollect();
@@ -155,7 +153,7 @@ namespace sd
             {
                 bumpMemoryLimit();
             }
-            return reinterpret_cast<T *>(object.getRawPtr());
+            return ptr;
         }
 
         /**

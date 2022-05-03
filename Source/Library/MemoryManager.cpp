@@ -1,19 +1,16 @@
 #include <setjmp.h>
 
-#include "MemoryManager.hpp"
 #include "DetectOs.hpp"
+#include "MemoryManager.hpp"
 
 #ifdef WINDOWS
-
 #include <windows.h>
 
 #include <processthreadsapi.h>
-
 #endif
+
 #ifdef LINUX
-
 #include <pthread.h>
-
 #endif
 
 namespace sd
@@ -32,7 +29,6 @@ namespace sd
         }
 
 #ifdef WINDOWS
-
         auto getStackBounds()
         {
             auto rsp = getStackRsp();
@@ -43,7 +39,6 @@ namespace sd
         }
 #endif
 #ifdef LINUX
-
         auto getStackBounds()
         {
             auto rsp = getStackRsp();
@@ -83,8 +78,8 @@ namespace sd
 
     void MemoryManager::clear()
     {
-        _register.forEach([this](Object &object) { destroy(object); });
-        _register.clear();
+        _objectRegister.forEach([this](Object &object) { destroy(object); });
+        _objectRegister.clear();
     }
 
     void MemoryManager::destroy(Object &object)
@@ -104,7 +99,7 @@ namespace sd
         {
             auto ptr = worklist.back();
             worklist.pop_back();
-            auto &object = _register.getObject(ptr);
+            auto &object = _objectRegister.getObject(ptr);
 
             if (object.isMarked())
             {
@@ -120,7 +115,7 @@ namespace sd
 
     void MemoryManager::sweep()
     {
-        _register.unregisterIf([this](Object &object) {
+        _objectRegister.unregisterIf([this](Object &object) {
             if (object.isMarked())
             {
                 object.unmark();
@@ -146,7 +141,7 @@ namespace sd
         while (rsp < top)
         {
             auto address = (void *)*reinterpret_cast<void **>(rsp);
-            if (_register.contains(address))
+            if (_objectRegister.contains(address))
             {
                 result.emplace_back(address);
             }
@@ -164,7 +159,7 @@ namespace sd
         while (p < end)
         {
             auto address = (void *)*reinterpret_cast<void **>(p);
-            if (_register.contains(address))
+            if (_objectRegister.contains(address))
             {
                 result.emplace_back(address);
             }

@@ -121,8 +121,7 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectObjectsWithCircleReferences)
 TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
 {
     auto circle = make(nullptr);
-    auto circle2 = make(circle);
-    circle->ptr = circle2;
+    circle->ptr = make(circle);
     {
 
         auto toRemove = make(nullptr);
@@ -140,8 +139,22 @@ TEST_F(MemoryManagerTest, ManagerShouldCollectSomeObjects)
 
     sd::MemoryManager::instance().garbageCollect();
 
-    EXPECT_FALSE(wasCollected({circle, circle2}));
+    EXPECT_FALSE(wasCollected({circle, circle->ptr}));
     EXPECT_LE(1, collectedCnt());
+}
+
+TEST_F(MemoryManagerTest, ManagerShouldNotCollectInnerObjects)
+{
+    auto circle = make(nullptr);
+    circle->ptr = make(nullptr);
+    circle->ptr->ptr = make(nullptr);
+    circle->ptr->ptr->ptr = make(nullptr);
+    circle->ptr->ptr->ptr->ptr = make(nullptr);
+
+    sd::MemoryManager::instance().garbageCollect();
+
+    EXPECT_FALSE(
+        wasCollected({circle, circle->ptr, circle->ptr->ptr, circle->ptr->ptr->ptr, circle->ptr->ptr->ptr->ptr}));
 }
 
 TEST_F(MemoryManagerTest, ManagerShouldNotCollectAutomaticallySomeObjects)

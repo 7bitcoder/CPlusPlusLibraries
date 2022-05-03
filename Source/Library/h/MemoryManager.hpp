@@ -53,8 +53,8 @@ namespace sd
             class Metadata
             {
               private:
-                bool _marked;
-                const TypeInfo *_typeInfo;
+                bool _marked = false;
+                const TypeInfo *_typeInfo = nullptr;
 
               public:
                 Metadata(TypeInfo *typeInfo) : _marked(false), _typeInfo(typeInfo) {}
@@ -65,7 +65,7 @@ namespace sd
             };
 
           private:
-            void *_ptr;
+            void *_ptr = nullptr;
             Metadata _metadata;
 
             Object(void *ptr, Metadata metadata) : _ptr(ptr), _metadata(metadata) {}
@@ -76,8 +76,7 @@ namespace sd
 
             template <class T, class... Args> static Object create(Args &&...params)
             {
-                auto ptr = Type<T>::create(std::forward<Args>(params)...);
-                return Object{ptr, {Type<T>::getInfo()}};
+                return Object{Type<T>::create(std::forward<Args>(params)...), {Type<T>::getInfo()}};
             };
 
             void *getRawPtr() const { return _ptr; }
@@ -122,7 +121,7 @@ namespace sd
         };
 #pragma endregion
 
-        ObjectsRegister _register;
+        ObjectsRegister _objectRegister;
 
         size_t _allocatedMemory = 0;
         size_t _memoryLimit = 1 * 1024 * 1024; // ~1MB
@@ -147,7 +146,7 @@ namespace sd
         {
             auto object = Object::create<T>(std::forward<Args>(params)...);
             _allocatedMemory += object.getSize();
-            _register.registerNew(object);
+            _objectRegister.registerNew(object);
             if (isGBCollectionNeeded())
             {
                 garbageCollect();

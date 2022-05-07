@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <unordered_map>
 
 namespace sd
@@ -16,8 +17,8 @@ namespace sd
 
     class MemoryManager : public IMemoryManager
     {
-      private:
 #pragma region HelperClasses
+      private:
         class Object
         {
           public:
@@ -61,6 +62,9 @@ namespace sd
                 void unmark() { _marked = false; }
                 bool isMarked() const { return _marked; }
                 const TypeInfo *getTypeInfo() const { return _typeInfo; }
+
+                bool isValid() const { return !!getTypeInfo(); }
+                operator bool() const { return isValid(); }
             };
 
           private:
@@ -80,8 +84,6 @@ namespace sd
             };
 
             void *getRawPtr() const { return _ptr; }
-            Metadata &getMetadata() { return _metadata; }
-            const Metadata &getMetadata() const { return _metadata; }
             const TypeInfo *getTypeInfo() const { return getMetadata().getTypeInfo(); }
 
             size_t getSize() const { return getTypeInfo()->getSize(); }
@@ -89,7 +91,22 @@ namespace sd
             void mark() { getMetadata().mark(); }
             void unmark() { getMetadata().unmark(); }
 
-            void destroy() { (*getTypeInfo()->getDeleter())(getRawPtr()); }
+            bool isValid() const { return !!getRawPtr() && getMetadata(); }
+            operator bool() const { return isValid(); }
+
+            void destroy()
+            {
+                if (isValid())
+                {
+                    (*getTypeInfo()->getDeleter())(getRawPtr());
+                }
+                _ptr = nullptr;
+                _metadata = Metadata{nullptr};
+            }
+
+          private:
+            Metadata &getMetadata() { return _metadata; }
+            const Metadata &getMetadata() const { return _metadata; }
         };
 
         class ObjectsRegister
@@ -98,14 +115,14 @@ namespace sd
             std::unordered_map<void *, Object> _objectsMap;
 
           public:
-            void registerNew(Object &&object) { _objectsMap.insert({object.getRawPtr(), std::move(object)}); }
-            bool contains(void *objectPtr) const { return _objectsMap.contains(objectPtr); }
+            void registerObject(Object &&object) { _objectsMap.insert({object.getRawPtr(), std::move(object)}); }
+            bool isObjectRegistered(void *objectPtr) const { return _objectsMap.contains(objectPtr); }
             Object &getObject(void *objectPtr) { return _objectsMap.at(objectPtr); }
 
             void clear() { _objectsMap.clear(); }
 
-            size_t numberOfRegisteredObjects() const { return _objectsMap.size(); }
-            bool anyObjectRegistered() const { return _objectsMap.empty(); }
+            size_t size() const { return _objectsMap.size(); }
+            bool empty() const { return _objectsMap.empty(); }
 
             template <class Fn> void unregisterIf(Fn func)
             {
@@ -117,7 +134,7 @@ namespace sd
             }
         };
 #pragma endregion
-
+      private:
         ObjectsRegister _objectRegister;
 
         size_t _allocatedMemory = 0;
@@ -144,7 +161,7 @@ namespace sd
             auto object = Object::create<T>(std::forward<Args>(params)...);
             auto ptr = reinterpret_cast<T *>(object.getRawPtr());
             _allocatedMemory += object.getSize();
-            _objectRegister.registerNew(std::move(object));
+            _objectRegister.registerObject(std::move(object));
             if (isGBCollectionNeeded())
             {
                 garbageCollect();

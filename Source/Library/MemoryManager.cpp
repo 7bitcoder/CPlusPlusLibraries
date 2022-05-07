@@ -141,7 +141,7 @@ namespace sd
         while (rsp < top)
         {
             auto address = (void *)*reinterpret_cast<void **>(rsp);
-            if (_objectRegister.contains(address))
+            if (_objectRegister.isObjectRegistered(address))
             {
                 result.emplace_back(address);
             }
@@ -159,7 +159,7 @@ namespace sd
         while (p < end)
         {
             auto address = (void *)*reinterpret_cast<void **>(p);
-            if (_objectRegister.contains(address))
+            if (_objectRegister.isObjectRegistered(address))
             {
                 result.emplace_back(address);
             }

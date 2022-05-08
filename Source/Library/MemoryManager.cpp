@@ -78,15 +78,8 @@ namespace sd
 
     void MemoryManager::clear()
     {
-        _objectRegister.forEach([this](Object &object) { destroy(object); });
+        _objectRegister.forEach([this](IObject &object) { _allocatedMemory -= object.getSize(); });
         _objectRegister.clear();
-    }
-
-    void MemoryManager::destroy(Object &object)
-    {
-        auto size = object.getSize();
-        object.destroy();
-        _allocatedMemory -= size;
     }
 
     bool MemoryManager::isGBCollectionNeeded() { return getAllocatedMemory() > getMemoryLimit(); }
@@ -115,7 +108,7 @@ namespace sd
 
     void MemoryManager::sweep()
     {
-        _objectRegister.unregisterIf([this](Object &object) {
+        _objectRegister.unregisterIf([this](IObject &object) {
             if (object.isMarked())
             {
                 object.unmark();
@@ -123,7 +116,7 @@ namespace sd
             }
             else
             {
-                destroy(object);
+                _allocatedMemory -= object.getSize();
                 return true;
             }
         });
@@ -151,9 +144,9 @@ namespace sd
         return result;
     }
 
-    std::vector<void *> MemoryManager::getInnerObjects(const Object &object)
+    std::vector<void *> MemoryManager::getInnerObjects(const IObject &object)
     {
-        auto p = (uint8_t *)object.getRawPtr();
+        auto p = (uint8_t *)object.getPtr();
         auto end = (p + object.getSize());
         std::vector<void *> result;
         while (p < end)

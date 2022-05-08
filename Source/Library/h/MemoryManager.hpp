@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <memory>
 #include <unordered_map>
 
 namespace sd
@@ -19,105 +20,60 @@ namespace sd
     {
 #pragma region HelperClasses
       private:
-        class Object
+        struct IObject
         {
-          public:
-            class TypeInfo
-            {
-              private:
-                using Deleter = void (*)(void *);
+            virtual void *getPtr() const = 0;
 
-                size_t _size = 0;
-                Deleter _deleter = nullptr;
+            virtual size_t getSize() const = 0;
 
-              public:
-                TypeInfo(size_t size, Deleter deleter) : _size(size), _deleter(deleter) {}
+            virtual bool isMarked() const = 0;
+            virtual void mark() = 0;
+            virtual void unmark() = 0;
 
-                size_t getSize() const { return _size; }
-                Deleter getDeleter() const { return _deleter; }
-            };
+            virtual bool isValid() const = 0;
 
-            template <class T> struct Type
-            {
-                template <class... A> static T *create(A &&...args) { return new T(std::forward<A>(args)...); };
+            virtual ~IObject() {}
+        };
 
-                static void destroy(void *objectPtr) { delete reinterpret_cast<T *>(objectPtr); }
-
-                static TypeInfo *getInfo()
-                {
-                    static TypeInfo *info = new TypeInfo{sizeof(T), &destroy};
-                    return info;
-                }
-            };
-
-            class Metadata
-            {
-              private:
-                bool _marked = false;
-                const TypeInfo *_typeInfo = nullptr;
-
-              public:
-                Metadata(TypeInfo *typeInfo) : _marked(false), _typeInfo(typeInfo) {}
-                void mark() { _marked = true; }
-                void unmark() { _marked = false; }
-                bool isMarked() const { return _marked; }
-                const TypeInfo *getTypeInfo() const { return _typeInfo; }
-
-                bool isValid() const { return !!getTypeInfo(); }
-                operator bool() const { return isValid(); }
-            };
-
+        template <class T> class Object final : public IObject
+        {
           private:
-            void *_ptr = nullptr;
-            Metadata _metadata;
+            bool _marked = false;
+            std::unique_ptr<T> _ptr;
 
-            Object(void *ptr, Metadata metadata) : _ptr(ptr), _metadata(metadata) {}
+            Object(T *ptr) : _ptr(ptr) {}
 
           public:
-            Object(Object &&other) : _ptr(other._ptr), _metadata(other._metadata) { other._ptr = nullptr; }
             Object(const Object &) = delete;
             Object &operator=(const Object &) = delete;
 
-            template <class T, class... Args> static Object create(Args &&...params)
+            template <class... Args> static std::unique_ptr<Object<T>> create(Args &&...params)
             {
-                return Object{Type<T>::create(std::forward<Args>(params)...), {Type<T>::getInfo()}};
+                return std::unique_ptr<Object<T>>(new Object{new T{std::forward<Args>(params)...}});
             };
 
-            void *getRawPtr() const { return _ptr; }
-            const TypeInfo *getTypeInfo() const { return getMetadata().getTypeInfo(); }
+            T *getTypedPtr() const { return _ptr.get(); }
+            void *getPtr() const final { return _ptr.get(); }
 
-            size_t getSize() const { return getTypeInfo()->getSize(); }
-            bool isMarked() const { return getMetadata().isMarked(); }
-            void mark() { getMetadata().mark(); }
-            void unmark() { getMetadata().unmark(); }
+            size_t getSize() const final { return sizeof(T); }
 
-            bool isValid() const { return !!getRawPtr() && getMetadata(); }
+            bool isMarked() const final { return _marked; }
+            void mark() final { _marked = true; }
+            void unmark() final { _marked = false; }
+
+            bool isValid() const final { return !!getPtr(); }
             operator bool() const { return isValid(); }
-
-            void destroy()
-            {
-                if (isValid())
-                {
-                    (*getTypeInfo()->getDeleter())(getRawPtr());
-                }
-                _ptr = nullptr;
-                _metadata = Metadata{nullptr};
-            }
-
-          private:
-            Metadata &getMetadata() { return _metadata; }
-            const Metadata &getMetadata() const { return _metadata; }
         };
 
         class ObjectsRegister
         {
           private:
-            std::unordered_map<void *, Object> _objectsMap;
+            std::unordered_map<void *, std::unique_ptr<IObject>> _objectsMap;
 
           public:
-            void registerObject(Object &&object) { _objectsMap.insert({object.getRawPtr(), std::move(object)}); }
+            void registerObject(std::unique_ptr<IObject> ob) { _objectsMap.insert({ob->getPtr(), std::move(ob)}); }
             bool isObjectRegistered(void *objectPtr) const { return _objectsMap.contains(objectPtr); }
-            Object &getObject(void *objectPtr) { return _objectsMap.at(objectPtr); }
+            IObject &getObject(void *objectPtr) { return *_objectsMap.at(objectPtr); }
 
             void clear() { _objectsMap.clear(); }
 
@@ -126,11 +82,11 @@ namespace sd
 
             template <class Fn> void unregisterIf(Fn func)
             {
-                std::erase_if(_objectsMap, [&](auto &pair) -> bool { return func(pair.second); });
+                std::erase_if(_objectsMap, [&](auto &pair) -> bool { return func(*pair.second); });
             }
             template <class Fn> void forEach(Fn func)
             {
-                std::for_each(_objectsMap.begin(), _objectsMap.end(), [&](auto &pair) { func(pair.second); });
+                std::for_each(_objectsMap.begin(), _objectsMap.end(), [&](auto &pair) { func(*pair.second); });
             }
         };
 #pragma endregion
@@ -158,9 +114,9 @@ namespace sd
          */
         template <class T, class... Args> T *create(Args &&...params)
         {
-            auto object = Object::create<T>(std::forward<Args>(params)...);
-            auto ptr = reinterpret_cast<T *>(object.getRawPtr());
-            _allocatedMemory += object.getSize();
+            std::unique_ptr<Object<T>> object = Object<T>::create(std::forward<Args>(params)...);
+            T *ptr = object->getTypedPtr();
+            _allocatedMemory += object->getSize();
             _objectRegister.registerObject(std::move(object));
             if (isGBCollectionNeeded())
             {
@@ -184,7 +140,6 @@ namespace sd
         size_t getAllocatedMemory() const override;
 
       private:
-        void destroy(Object &object);
         void clear();
 
         bool isGBCollectionNeeded();
@@ -192,7 +147,7 @@ namespace sd
         void sweep();
 
         std::vector<void *> getRoots();
-        std::vector<void *> getInnerObjects(const Object &object);
+        std::vector<void *> getInnerObjects(const IObject &object);
 
         size_t getMemoryLimit() const;
         void bumpMemoryLimit();

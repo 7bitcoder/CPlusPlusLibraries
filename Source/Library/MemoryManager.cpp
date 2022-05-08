@@ -78,8 +78,15 @@ namespace sd
 
     void MemoryManager::clear()
     {
-        _objectRegister.forEach([this](IObject &object) { _allocatedMemory -= object.getSize(); });
-        _objectRegister.clear();
+        _objectsRegister.forEach([this](IObjectHolder &objectHolder) { destroyObject(objectHolder); });
+        _objectsRegister.clear();
+    }
+
+    void MemoryManager::destroyObject(IObjectHolder &objectHolder)
+    {
+        auto objectSize = objectHolder.getObjectSize();
+        objectHolder.destroyObject();
+        _allocatedMemory -= objectSize;
     }
 
     bool MemoryManager::isGBCollectionNeeded() { return getAllocatedMemory() > getMemoryLimit(); }
@@ -92,14 +99,14 @@ namespace sd
         {
             auto ptr = worklist.back();
             worklist.pop_back();
-            auto &object = _objectRegister.getObject(ptr);
+            auto &objectHolder = _objectsRegister.getObjectHolder(ptr);
 
-            if (object.isMarked())
+            if (objectHolder.isMarked())
             {
                 continue;
             }
-            object.mark();
-            for (const auto &p : getInnerObjects(object))
+            objectHolder.mark();
+            for (const auto &p : getInnerObjects(objectHolder))
             {
                 worklist.push_back(p);
             }
@@ -108,15 +115,15 @@ namespace sd
 
     void MemoryManager::sweep()
     {
-        _objectRegister.unregisterIf([this](IObject &object) {
-            if (object.isMarked())
+        _objectsRegister.unregisterIf([this](IObjectHolder &objectHolder) {
+            if (objectHolder.isMarked())
             {
-                object.unmark();
+                objectHolder.unmark();
                 return false;
             }
             else
             {
-                _allocatedMemory -= object.getSize();
+                destroyObject(objectHolder);
                 return true;
             }
         });
@@ -134,7 +141,7 @@ namespace sd
         while (rsp < top)
         {
             auto address = (void *)*reinterpret_cast<void **>(rsp);
-            if (_objectRegister.isObjectRegistered(address))
+            if (_objectsRegister.isObjectRegistered(address))
             {
                 result.emplace_back(address);
             }
@@ -144,15 +151,15 @@ namespace sd
         return result;
     }
 
-    std::vector<void *> MemoryManager::getInnerObjects(const IObject &object)
+    std::vector<void *> MemoryManager::getInnerObjects(const IObjectHolder &objectHolder)
     {
-        auto p = (uint8_t *)object.getPtr();
-        auto end = (p + object.getSize());
+        auto p = (uint8_t *)objectHolder.getObjectPtr();
+        auto end = (p + objectHolder.getObjectSize());
         std::vector<void *> result;
         while (p < end)
         {
             auto address = (void *)*reinterpret_cast<void **>(p);
-            if (_objectRegister.isObjectRegistered(address))
+            if (_objectsRegister.isObjectRegistered(address))
             {
                 result.emplace_back(address);
             }

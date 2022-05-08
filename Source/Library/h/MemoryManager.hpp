@@ -20,60 +20,66 @@ namespace sd
     {
 #pragma region HelperClasses
       private:
-        struct IObject
+        struct IObjectHolder
         {
-            virtual void *getPtr() const = 0;
+            virtual void *getObjectPtr() const = 0;
 
-            virtual size_t getSize() const = 0;
+            virtual size_t getObjectSize() const = 0;
 
             virtual bool isMarked() const = 0;
             virtual void mark() = 0;
             virtual void unmark() = 0;
 
+            virtual void destroyObject() = 0;
             virtual bool isValid() const = 0;
 
-            virtual ~IObject() {}
+            virtual ~IObjectHolder() {}
         };
 
-        template <class T> class Object final : public IObject
+        template <class T> class ObjectHolder final : public IObjectHolder
         {
           private:
             bool _marked = false;
-            std::unique_ptr<T> _ptr;
+            std::unique_ptr<T> _objectPtr;
 
-            Object(T *ptr) : _ptr(ptr) {}
+            ObjectHolder(T *objectPtr) : _objectPtr(objectPtr) {}
 
           public:
-            Object(const Object &) = delete;
-            Object &operator=(const Object &) = delete;
+            ObjectHolder(const ObjectHolder &) = delete;
+            ObjectHolder &operator=(const ObjectHolder &) = delete;
 
-            template <class... Args> static std::unique_ptr<Object<T>> create(Args &&...params)
+            template <class... Args> static std::unique_ptr<ObjectHolder<T>> create(Args &&...params)
             {
-                return std::unique_ptr<Object<T>>(new Object{new T{std::forward<Args>(params)...}});
+                auto objectPtr = new T{std::forward<Args>(params)...};
+                return std::unique_ptr<ObjectHolder<T>>(new ObjectHolder{objectPtr});
             };
 
-            T *getTypedPtr() const { return _ptr.get(); }
-            void *getPtr() const final { return _ptr.get(); }
+            T *getTypedObjectPtr() const { return _objectPtr.get(); }
+            void *getObjectPtr() const final { return _objectPtr.get(); }
 
-            size_t getSize() const final { return sizeof(T); }
+            size_t getObjectSize() const final { return sizeof(T); }
 
             bool isMarked() const final { return _marked; }
             void mark() final { _marked = true; }
             void unmark() final { _marked = false; }
 
-            bool isValid() const final { return !!getPtr(); }
+            void destroyObject() { _objectPtr.reset(); }
+            bool isValid() const final { return !!getObjectPtr(); }
             operator bool() const { return isValid(); }
         };
 
         class ObjectsRegister
         {
           private:
-            std::unordered_map<void *, std::unique_ptr<IObject>> _objectsMap;
+            std::unordered_map<void *, std::unique_ptr<IObjectHolder>> _objectsMap;
 
           public:
-            void registerObject(std::unique_ptr<IObject> ob) { _objectsMap.insert({ob->getPtr(), std::move(ob)}); }
+            void registerObject(std::unique_ptr<IObjectHolder> objectHolder)
+            {
+                _objectsMap.insert({objectHolder->getObjectPtr(), std::move(objectHolder)});
+            }
             bool isObjectRegistered(void *objectPtr) const { return _objectsMap.contains(objectPtr); }
-            IObject &getObject(void *objectPtr) { return *_objectsMap.at(objectPtr); }
+            IObjectHolder &getObjectHolder(void *objectPtr) { return *_objectsMap.at(objectPtr); }
 
             void clear() { _objectsMap.clear(); }
 
@@ -91,7 +97,7 @@ namespace sd
         };
 #pragma endregion
       private:
-        ObjectsRegister _objectRegister;
+        ObjectsRegister _objectsRegister;
 
         size_t _allocatedMemory = 0;
         size_t _memoryLimit = 1 * 1024 * 1024; // ~1MB
@@ -112,12 +118,12 @@ namespace sd
          * Get Pointner to newly created menagable object,
          * if object wont be recheable in stack scope it will be collected
          */
-        template <class T, class... Args> T *create(Args &&...params)
+        template <class T, class... Args> T *createObject(Args &&...params)
         {
-            std::unique_ptr<Object<T>> object = Object<T>::create(std::forward<Args>(params)...);
-            T *ptr = object->getTypedPtr();
-            _allocatedMemory += object->getSize();
-            _objectRegister.registerObject(std::move(object));
+            std::unique_ptr<ObjectHolder<T>> objectHolderPtr = ObjectHolder<T>::create(std::forward<Args>(params)...);
+            T *ptr = objectHolderPtr->getTypedObjectPtr();
+            _allocatedMemory += objectHolderPtr->getObjectSize();
+            _objectsRegister.registerObject(std::move(objectHolderPtr));
             if (isGBCollectionNeeded())
             {
                 garbageCollect();
@@ -140,6 +146,7 @@ namespace sd
         size_t getAllocatedMemory() const override;
 
       private:
+        void destroyObject(IObjectHolder &objectHolder);
         void clear();
 
         bool isGBCollectionNeeded();
@@ -147,7 +154,7 @@ namespace sd
         void sweep();
 
         std::vector<void *> getRoots();
-        std::vector<void *> getInnerObjects(const IObject &object);
+        std::vector<void *> getInnerObjects(const IObjectHolder &objectHolder);
 
         size_t getMemoryLimit() const;
         void bumpMemoryLimit();
@@ -158,6 +165,6 @@ namespace sd
      */
     template <class T, class... Args> T *make(Args &&...params)
     {
-        return MemoryManager::instance().create<T>(std::forward<Args>(params)...);
+        return MemoryManager::instance().createObject<T>(std::forward<Args>(params)...);
     }
 } // namespace sd

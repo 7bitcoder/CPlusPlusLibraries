@@ -1,4 +1,5 @@
 #include <setjmp.h>
+#include <vector>
 
 #include "DetectOs.hpp"
 #include "MemoryManager.hpp"
@@ -9,7 +10,7 @@
 #include <processthreadsapi.h>
 #endif
 
-#ifdef LINUX
+#if defined(LINUX) || defined(APPLE)
 #include <pthread.h>
 #endif
 
@@ -18,14 +19,19 @@ namespace sd
     namespace
     {
 
-#define __READ_RBP(rbp) __asm__ volatile("movq %%rbp, %0" : "=r"(rbp))
+#define __READ_RBP(rbp) __asm__ volatile("movq %%rbp, %0" : "=r"(rbp)) // x86
+#define __READ_RBP_ARM(rbp) __asm__ volatile("mov %0, sp" : "=r"(rbp)) // arm64
 #define __READ_RSP(rsp) __asm__ volatile("movq %%rsp, %0" : "=r"(rsp))
 
-        auto getStackRsp()
+        uint8_t *getStackRsp()
         {
-            intptr_t *rsp;
-            __READ_RSP(rsp);
-            return (uint8_t *)rsp;
+            intptr_t *ptr;
+#ifdef APPLE
+            __READ_RBP_ARM(ptr);
+#else
+            __READ_RSP(ptr);
+#endif
+            return (uint8_t *)ptr;
         }
 
 #ifdef WINDOWS
@@ -38,17 +44,16 @@ namespace sd
             return std::make_tuple((uint8_t *)highLimit - 10, (uint8_t *)lowLimit, rsp);
         }
 #endif
-#ifdef LINUX
+#if defined(LINUX) || defined(APPLE)
         auto getStackBounds()
         {
             auto rsp = getStackRsp();
             pthread_attr_t attrs;
-            pthread_getattr_np(pthread_self(), &attrs);
-            void *stack_ptr;
-            size_t stack_size;
-            pthread_attr_getstack(&attrs, &stack_ptr, &stack_size);
+            auto self = pthread_self();
+            void *stack_ptr = pthread_get_stackaddr_np(self);
+            size_t stack_size = pthread_get_stacksize_np(self);
 
-            return std::make_tuple((uint8_t *)stack_ptr + stack_size - 10, (uint8_t *)stack_ptr, rsp);
+            return std::make_tuple((uint8_t *)stack_ptr - 10, (uint8_t *)stack_ptr - stack_size, rsp);
         }
 #endif
     } // namespace

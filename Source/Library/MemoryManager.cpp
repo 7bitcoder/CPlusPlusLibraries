@@ -44,7 +44,20 @@ namespace sd
             return std::make_tuple((uint8_t *)highLimit - 10, (uint8_t *)lowLimit, rsp);
         }
 #endif
-#if defined(LINUX) || defined(APPLE)
+#ifdef LINUX 
+        auto getStackBounds()
+        {
+            auto rsp = getStackRsp();
+            pthread_attr_t attrs;
+            pthread_getattr_np(pthread_self(), &attrs);
+            void *stack_ptr;
+            size_t stack_size;
+            pthread_attr_getstack(&attrs, &stack_ptr, &stack_size);
+
+            return std::make_tuple((uint8_t *)stack_ptr + stack_size - 10, (uint8_t *)stack_ptr, rsp);
+        }
+#endif
+#ifdef APPLE
         auto getStackBounds()
         {
             auto rsp = getStackRsp();

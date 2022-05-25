@@ -7,16 +7,7 @@
 
 namespace sd
 {
-
-    struct IMemoryManager
-    {
-        virtual size_t garbageCollect() = 0;
-        virtual size_t getAllocatedMemory() const = 0;
-
-        virtual ~IMemoryManager() {}
-    };
-
-    class MemoryManager : public IMemoryManager
+    class MemoryManager
     {
 #pragma region HelperClasses
       private:
@@ -138,12 +129,12 @@ namespace sd
         /**
          * Runs manually garbage collection, returns bytes freed during this collection
          */
-        size_t garbageCollect() override;
+        size_t garbageCollect();
 
         /**
          * Get number of bytes currently allocated by memory manager.
          */
-        size_t getAllocatedMemory() const override;
+        size_t getAllocatedMemory() const;
 
       private:
         void destroyObject(IObjectHolder &objectHolder);

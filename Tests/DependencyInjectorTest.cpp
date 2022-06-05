@@ -4,21 +4,41 @@
 
 #include "DependencyInjector.hpp"
 
-#define Injectable() static
-struct TestA
+struct SimpleClass
 {
-    static TestA *constructor() { return new TestA(); };
 
     int gg = 100;
 
-    Injectable() TestA() {}
+    SimpleClass() {}
 };
 
-struct TestB
+struct OneRefClass
 {
-    static TestB *constructor(TestA *a) { return new TestB(); };
-
     int ff = 100;
+    SimpleClass *_a;
+
+    OneRefClass(SimpleClass *a) { _a = a; }
+};
+
+struct IInheranceClass
+{
+    virtual int get() = 0;
+    virtual SimpleClass *getSimple() = 0;
+    virtual const OneRefClass *getOneRef() = 0;
+    virtual ~IInheranceClass() {}
+};
+
+struct InheranceClass final : public IInheranceClass
+{
+    int ff = 100;
+    SimpleClass *_a;
+    const OneRefClass &_b;
+
+    InheranceClass(SimpleClass *a, const OneRefClass *b) : _b(*b) { _a = a; }
+
+    int get() final { return ff; }
+    SimpleClass *getSimple() { return _a; }
+    const OneRefClass *getOneRef() { return &_b; }
 };
 
 class DependencyInjector : public ::testing::Test
@@ -39,15 +59,54 @@ class DependencyInjector : public ::testing::Test
     static void TearDownTestSuite() {}
 };
 
-TEST_F(DependencyInjector, ExampleTest)
+TEST_F(DependencyInjector, AddServiceTest) { EXPECT_NO_THROW((di.addSingeleton<SimpleClass, SimpleClass>())); }
+
+TEST_F(DependencyInjector, AddMultipleServicesTest)
 {
-    di.addSingeleton<TestA, TestA>();
-    di.addSingeleton<TestB, TestB>();
+    di.addSingeleton<SimpleClass, SimpleClass>();
+    di.addSingeleton<OneRefClass, OneRefClass>();
+    di.addSingeleton<IInheranceClass, InheranceClass>();
 
     di.build();
 
-    TestA *a = di.get<TestA>();
+    EXPECT_TRUE(di.getPtr<SimpleClass>());
+    EXPECT_TRUE(di.getPtr<OneRefClass>());
+    EXPECT_TRUE(di.getPtr<IInheranceClass>());
+}
 
-    TestB *b = di.get<TestB>();
-    int g = 0;
+TEST_F(DependencyInjector, AddMultipleServicesTestRef)
+{
+    di.addSingeleton<SimpleClass, SimpleClass>();
+    di.addSingeleton<OneRefClass, OneRefClass>();
+    di.addSingeleton<IInheranceClass, InheranceClass>();
+
+    di.build();
+
+    EXPECT_NO_THROW(di.getRef<SimpleClass>());
+    EXPECT_NO_THROW(di.getRef<OneRefClass>());
+    EXPECT_NO_THROW(di.getRef<IInheranceClass>());
+}
+
+TEST_F(DependencyInjector, SingeletonInstance)
+{
+    di.addSingeleton<SimpleClass, SimpleClass>();
+    di.addSingeleton<OneRefClass, OneRefClass>();
+    di.addSingeleton<IInheranceClass, InheranceClass>();
+
+    di.build();
+
+    auto simple = di.getPtr<SimpleClass>();
+    auto ref = di.getPtr<OneRefClass>();
+    auto inheritance = di.getPtr<IInheranceClass>();
+    EXPECT_TRUE(inheritance);
+    EXPECT_TRUE(inheritance->get());
+    EXPECT_EQ(simple, inheritance->getSimple());
+    EXPECT_EQ(ref, inheritance->getOneRef());
+}
+
+TEST_F(DependencyInjector, BuildFail)
+{
+    di.addSingeleton<IInheranceClass, InheranceClass>();
+
+    EXPECT_THROW(di.build(), std::runtime_error);
 }

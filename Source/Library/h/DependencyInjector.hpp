@@ -1,12 +1,17 @@
 #pragma once
 
 #include <algorithm>
+#include <exception>
 #include <functional>
 #include <memory>
+#include <stdexcept>
+#include <tuple>
+#include <type_traits>
 #include <typeindex>
 #include <typeinfo>
 #include <unordered_map>
-#include <vector>
+
+#include "Reflection.hpp"
 
 namespace sd
 {
@@ -14,17 +19,53 @@ namespace sd
     class DependencyInjector
     {
       private:
-        template <typename T> struct FunctionTraits;
-
-        template <typename R, typename... Args> struct FunctionTraits<std::function<R(Args...)>>
+        struct IObjectHolder
         {
-            static const size_t nargs = sizeof...(Args);
+            virtual void *getObjectPtr() const = 0;
 
-            typedef R result_type;
+            virtual void destroyObject() = 0;
+            virtual bool isValid() const = 0;
 
-            template <size_t i> struct arg
+            virtual ~IObjectHolder() {}
+        };
+
+        template <class T> class ObjectHolder final : public IObjectHolder
+        {
+          private:
+            std::unique_ptr<T> _objectPtr;
+
+            ObjectHolder(T *objectPtr) : _objectPtr(objectPtr) {}
+
+          public:
+            ObjectHolder(const ObjectHolder &) = delete;
+            ObjectHolder &operator=(const ObjectHolder &) = delete;
+
+            template <class... Args> static std::unique_ptr<ObjectHolder<T>> create(Args &&...params)
             {
-                typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
+                auto objectPtr = new T{std::forward<Args>(params)...};
+                return std::unique_ptr<ObjectHolder<T>>(new ObjectHolder{objectPtr});
+            };
+
+            T *getTypedObjectPtr() const { return _objectPtr.get(); }
+            void *getObjectPtr() const final { return _objectPtr.get(); }
+
+            void destroyObject() { _objectPtr.reset(); }
+            bool isValid() const final { return !!getObjectPtr(); }
+            operator bool() const { return isValid(); }
+        };
+
+        template <class T> struct ConstrutorTraits
+        {
+            using Type = T;
+            using TupleArgs = AsTuple<Type>;
+
+            static constexpr size_t ArgsSize = std::tuple_size_v<TupleArgs>;
+
+            template <size_t I> struct Arg
+            {
+                using Type = typename std::tuple_element<I, TupleArgs>::type;
+                using RawType = typename std::remove_cvref_t<std::remove_pointer_t<Type>>;
+                using RawTypePtr = typename std::add_pointer_t<RawType>;
             };
         };
 
@@ -34,69 +75,85 @@ namespace sd
 
             virtual const std::vector<std::type_index> getParamsTypeIndexes() const = 0;
 
-            virtual void *construct(const std::vector<void *> &params) const = 0;
+            virtual std::unique_ptr<IObjectHolder> construct(const std::vector<void *> &params) const = 0;
 
             virtual ~IConstructionInfo() {}
         };
 
-        template <typename R, typename... Args> class ConstructionInfo final : public IConstructionInfo
+        template <typename T> class ConstructionInfo final : public IConstructionInfo
         {
           private:
-            using ConstructorTraits = FunctionTraits<std::function<R(Args...)>>;
-            std::function<R(Args...)> _constructor;
+            using ConstructorTraits = ConstrutorTraits<T>;
+            using Indices = std::make_index_sequence<ConstructorTraits::ArgsSize>;
 
           public:
-            ConstructionInfo(const std::function<R(Args...)> &constructor) { _constructor = constructor; }
-
-            std::type_index getTypeIndex() const { return typeid(typename ConstructorTraits::result_type); }
+            std::type_index getTypeIndex() const { return typeid(typename ConstructorTraits::Type); }
 
             const std::vector<std::type_index> getParamsTypeIndexes() const
             {
-                if constexpr (ConstructorTraits::nargs == 0)
-                {
-                    return {};
-                }
-                else if constexpr (ConstructorTraits::nargs == 1)
-                {
-                    return {typeid(typename ConstructorTraits::template arg<0>::type)};
-                }
-                else if constexpr (ConstructorTraits::nargs == 2)
-                {
-                    return {typeid(typename ConstructorTraits::template arg<0>::type),
-                            typeid(typename ConstructorTraits::template arg<1>::type)};
-                }
+                return getParamsTypeIndexesInt(Indices{});
             };
 
-            void *construct(const std::vector<void *> &params) const
+            std::unique_ptr<IObjectHolder> construct(const std::vector<void *> &params) const
             {
-                if constexpr (ConstructorTraits::nargs == 0)
+                if (params.size() != ConstructorTraits::ArgsSize)
                 {
-                    return _constructor();
+                    throw std::runtime_error("Wrong Argument vector size");
                 }
-                else if constexpr (ConstructorTraits::nargs == 1)
-                {
-                    return _constructor((typename ConstructorTraits::template arg<0>::type)(params[0]));
-                }
-                else if constexpr (ConstructorTraits::nargs == 2)
-                {
-                }
+                return constructInt(Indices{}, params);
             };
+
+          private:
+            template <size_t... I>
+            const std::vector<std::type_index> getParamsTypeIndexesInt(std::index_sequence<I...> seq) const
+            {
+                return std::vector<std::type_index>{(typeid(typename ConstructorTraits::template Arg<I>::RawType))...};
+            };
+
+            template <size_t... I>
+            std::unique_ptr<ObjectHolder<T>> constructInt(std::index_sequence<I...> seq,
+                                                          const std::vector<void *> &params) const
+            {
+                return ObjectHolder<T>::create(getParameter<I>(params)...);
+            };
+
+            template <size_t I> constexpr auto getParameter(const std::vector<void *> &params) const
+            {
+                if constexpr (std::is_pointer_v<typename ConstructorTraits::template Arg<I>::Type>)
+                {
+                    return (typename ConstructorTraits::template Arg<I>::RawTypePtr)params[I];
+                }
+                else if constexpr (std::is_reference_v<typename ConstructorTraits::template Arg<I>::Type>)
+                {
+                    return *(typename ConstructorTraits::template Arg<I>::RawTypePtr)params[I];
+                }
+                else
+                {
+                    static_assert(true, "Could not fetch parameters");
+                }
+            }
         };
 
       private:
         std::unordered_map<std::type_index, std::unique_ptr<IConstructionInfo>> _registered;
-        std::unordered_map<std::type_index, void *> _objectsMap;
+        std::unordered_map<std::type_index, std::unique_ptr<IObjectHolder>> _objectsMap;
 
       public:
         template <class I, class T> void addSingeleton()
         {
-            // todo check if T inherits from/implements I
-            std::function<decltype(T::constructor)> ff{&T::constructor};
-            auto i = new ConstructionInfo(ff);
-            _registered.insert({typeid(I *), std::unique_ptr<IConstructionInfo>(i)});
+            static_assert(std::is_base_of_v<I, T>, "Type T must inherit from I");
+            _registered.insert({typeid(I), std::make_unique<ConstructionInfo<T>>()});
         }
 
-        template <class I> I *get() { return (I *)get(typeid(I *)); }
+        template <class I> I *getPtr() { return (I *)get(typeid(I)); }
+        template <class I> I &getRef()
+        {
+            if (auto ptr = getPtr<I>())
+            {
+                return *ptr;
+            }
+            throw std::exception_ptr();
+        }
 
         void build()
         {
@@ -127,32 +184,25 @@ namespace sd
                 }
                 else
                 {
-                    // todo
+                    throw std::runtime_error("Services build failed");
                 }
             }
-            auto object = info.construct(params);
-            _objectsMap.insert({typeIndex, object});
-            return object;
+            auto objectHolder = info.construct(params);
+            auto rawPtr = objectHolder->getObjectPtr();
+            _objectsMap.insert({typeIndex, std::move(objectHolder)});
+            return rawPtr;
         }
 
         void *get(std::type_index index)
         {
             auto pair = _objectsMap.find(index);
-            return pair != _objectsMap.end() ? pair->second : nullptr;
+            return pair != _objectsMap.end() ? pair->second->getObjectPtr() : nullptr;
         }
 
         IConstructionInfo *getRegistered(std::type_index index)
         {
             auto pair = _registered.find(index);
-            if (pair != _registered.end())
-            {
-                auto &ob = pair->second;
-                return ob.get();
-            }
-            else
-            {
-                return nullptr;
-            }
+            return pair != _registered.end() ? pair->second.get() : nullptr;
         }
     };
 } // namespace sd

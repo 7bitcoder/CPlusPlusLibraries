@@ -5,16 +5,56 @@
 #include <functional>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 #include <type_traits>
 #include <typeindex>
 #include <typeinfo>
 #include <unordered_map>
+#include <utility>
 
 #include "Reflection.hpp"
 
 namespace sd
 {
+    template <const char *T, class S> class Token
+    {
+      private:
+        static constexpr const char *Value = T;
+        S *_object;
+
+      public:
+        static std::string getToken() { return Value; }
+
+        Token(S *object) : _object(object) {}
+
+        S *get() const { return _object; }
+    };
+
+    enum ScopeType
+    {
+        Singeleton,
+        Tokenized,
+        Scoped,
+    };
+
+    struct Scope
+    {
+      public:
+        static Scope singeleton() { return {ScopeType::Singeleton}; }
+        static Scope scoped() { return {ScopeType::Scoped}; }
+        static Scope tokenized(const char *token) { return {token}; }
+
+        const ScopeType type;
+        const char *token = nullptr;
+
+        Scope(ScopeType type) : type(type) {}
+        Scope(const char *token) : type(ScopeType::Tokenized), token(token) {}
+
+        bool isSingeleton() const { return type == ScopeType::Singeleton; }
+        bool isScoped() const { return type == ScopeType::Scoped; }
+        bool isTokenized() const { return type == ScopeType::Tokenized; }
+    };
 
     class DependencyInjector
     {
@@ -26,6 +66,8 @@ namespace sd
             virtual void destroyObject() = 0;
             virtual bool isValid() const = 0;
 
+            virtual const char *getToken() const = 0;
+
             virtual ~IObjectHolder() {}
         };
 
@@ -33,8 +75,9 @@ namespace sd
         {
           private:
             std::unique_ptr<T> _objectPtr;
+            const char *_token = nullptr;
 
-            ObjectHolder(T *objectPtr) : _objectPtr(objectPtr) {}
+            ObjectHolder(T *objectPtr, const char *token = nullptr) : _objectPtr(objectPtr), _token(token) {}
 
           public:
             ObjectHolder(const ObjectHolder &) = delete;
@@ -71,6 +114,8 @@ namespace sd
 
         struct IConstructionInfo
         {
+            virtual const Scope &getScope() const = 0;
+
             virtual std::type_index getTypeIndex() const = 0;
 
             virtual const std::vector<std::type_index> getParamsTypeIndexes() const = 0;
@@ -85,8 +130,13 @@ namespace sd
           private:
             using ConstructorTraits = ConstrutorTraits<T>;
             using Indices = std::make_index_sequence<ConstructorTraits::ArgsSize>;
+            Scope _scope;
 
           public:
+            ConstructionInfo(const Scope &scope) : _scope(scope) {}
+
+            const Scope &getScope() const { return _scope; };
+
             std::type_index getTypeIndex() const { return typeid(typename ConstructorTraits::Type); }
 
             const std::vector<std::type_index> getParamsTypeIndexes() const
@@ -135,20 +185,31 @@ namespace sd
         };
 
       private:
+        using ObjKey = std::pair<std::type_index, const char *>;
         std::unordered_map<std::type_index, std::unique_ptr<IConstructionInfo>> _registered;
-        std::unordered_map<std::type_index, std::unique_ptr<IObjectHolder>> _objectsMap;
+        std::unordered_map<ObjKey, std::unique_ptr<IObjectHolder>> _objectsMap;
 
       public:
         template <class I, class T> void addSingeleton()
         {
             static_assert(std::is_base_of_v<I, T>, "Type T must inherit from I");
-            _registered.insert({typeid(I), std::make_unique<ConstructionInfo<T>>()});
+            _registered.insert({typeid(I), std::make_unique<ConstructionInfo<T>>(Scope::singeleton())});
+        }
+        template <class I, class T> void addScoped()
+        {
+            static_assert(std::is_base_of_v<I, T>, "Type T must inherit from I");
+            _registered.insert({typeid(I), std::make_unique<ConstructionInfo<T>>(Scope::scoped())});
+        }
+        template <class I, class T> void addTokenized(const char *token)
+        {
+            static_assert(std::is_base_of_v<I, T>, "Type T must inherit from I");
+            _registered.insert({typeid(I), std::make_unique<ConstructionInfo<T>>(Scope::tokenized(token))});
         }
 
-        template <class I> I *getPtr() { return (I *)get(typeid(I)); }
-        template <class I> I &getRef()
+        template <class I> I *getPtr(const char *token = nullptr) { return (I *)getFromObjectsMap(typeid(I), token); }
+        template <class I> I &getRef(const char *token = nullptr)
         {
-            if (auto ptr = getPtr<I>())
+            if (auto ptr = getPtr<I>(token))
             {
                 return *ptr;
             }
@@ -160,42 +221,63 @@ namespace sd
             for (auto &objectToBuild : _registered)
             {
                 auto &[index, constructionInfo] = objectToBuild;
-                if (!get(index))
+                if (constructionInfo->getScope().isSingeleton() && !getFromObjectsMap(index))
                 {
-                    make(index, *constructionInfo);
+                    createAndRegister(index, constructionInfo->getScope());
                 }
             }
         }
 
       private:
-        void *make(std::type_index typeIndex, IConstructionInfo &info)
+        void *createAndRegister(std::type_index typeIndex, const Scope &scope)
         {
-            std::vector<void *> params;
-            auto &indexes = info.getParamsTypeIndexes();
-            for (auto index : indexes)
-            {
-                if (auto object = get(index))
-                {
-                    params.push_back(object);
-                }
-                else if (auto constructionInfo = getRegistered(index))
-                {
-                    params.push_back(make(index, *constructionInfo));
-                }
-                else
-                {
-                    throw std::runtime_error("Services build failed");
-                }
-            }
-            auto objectHolder = info.construct(params);
+            auto objectHolder = create(typeIndex);
             auto rawPtr = objectHolder->getObjectPtr();
-            _objectsMap.insert({typeIndex, std::move(objectHolder)});
+            ObjKey key{typeIndex, scope.isTokenized() ? scope.token : nullptr};
+            _objectsMap.insert({key, std::move(objectHolder)});
             return rawPtr;
         }
 
-        void *get(std::type_index index)
+        std::unique_ptr<IObjectHolder> create(std::type_index typeIndex)
         {
-            auto pair = _objectsMap.find(index);
+            std::vector<void *> params;
+            auto info = getRegistered(typeIndex);
+            if (!info)
+            {
+                // todo
+            }
+            auto &indexes = info->getParamsTypeIndexes();
+            for (auto index : indexes)
+            {
+                params.push_back(get(index));
+            }
+            return info->construct(params);
+        }
+
+        void *get(std::type_index index, const Scope &scope = Scope::singeleton())
+        {
+            if (scope.isScoped())
+            {
+                return create(index);
+            }
+            const char *token = scope.isTokenized() ? scope.token : nullptr;
+            if (auto object = getFromObjectsMap(index, token))
+            {
+                return object;
+            }
+            else if (auto constructionInfo = getRegistered(index))
+            {
+                params.push_back(make(index, *constructionInfo));
+            }
+            else
+            {
+                throw std::runtime_error("Services build failed");
+            }
+        }
+
+        void *getFromObjectsMap(std::type_index index, const char *token = nullptr)
+        {
+            auto pair = _objectsMap.find({index, token});
             return pair != _objectsMap.end() ? pair->second->getObjectPtr() : nullptr;
         }
 

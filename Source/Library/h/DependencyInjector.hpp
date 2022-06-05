@@ -61,7 +61,7 @@ namespace sd
       private:
         struct IObjectHolder
         {
-            virtual void *getObjectPtr() const = 0;
+            virtual std::shared_ptr<void> getObjectPtr() const = 0;
 
             virtual void destroyObject() = 0;
             virtual bool isValid() const = 0;
@@ -74,7 +74,7 @@ namespace sd
         template <class T> class ObjectHolder final : public IObjectHolder
         {
           private:
-            std::unique_ptr<T> _objectPtr;
+            std::shared_ptr<T> _objectPtr;
             const char *_token = nullptr;
 
             ObjectHolder(T *objectPtr, const char *token = nullptr) : _objectPtr(objectPtr), _token(token) {}
@@ -89,8 +89,8 @@ namespace sd
                 return std::unique_ptr<ObjectHolder<T>>(new ObjectHolder{objectPtr});
             };
 
-            T *getTypedObjectPtr() const { return _objectPtr.get(); }
-            void *getObjectPtr() const final { return _objectPtr.get(); }
+            std::shared_ptr<T> getTypedObjectPtr() const { return _objectPtr; }
+            std::shared_ptr<void> getObjectPtr() const final { return _objectPtr; }
 
             void destroyObject() { _objectPtr.reset(); }
             bool isValid() const final { return !!getObjectPtr(); }
@@ -120,7 +120,8 @@ namespace sd
 
             virtual const std::vector<std::type_index> getParamsTypeIndexes() const = 0;
 
-            virtual std::unique_ptr<IObjectHolder> construct(const std::vector<void *> &params) const = 0;
+            virtual std::unique_ptr<IObjectHolder> construct(
+                const std::vector<std::shared_ptr<void>> &params) const = 0;
 
             virtual ~IConstructionInfo() {}
         };
@@ -144,7 +145,7 @@ namespace sd
                 return getParamsTypeIndexesInt(Indices{});
             };
 
-            std::unique_ptr<IObjectHolder> construct(const std::vector<void *> &params) const
+            std::unique_ptr<IObjectHolder> construct(const std::vector<std::shared_ptr<void>> &params) const
             {
                 if (params.size() != ConstructorTraits::ArgsSize)
                 {
@@ -162,12 +163,12 @@ namespace sd
 
             template <size_t... I>
             std::unique_ptr<ObjectHolder<T>> constructInt(std::index_sequence<I...> seq,
-                                                          const std::vector<void *> &params) const
+                                                          const std::vector<std::shared_ptr<void>> &params) const
             {
                 return ObjectHolder<T>::create(getParameter<I>(params)...);
             };
 
-            template <size_t I> constexpr auto getParameter(const std::vector<void *> &params) const
+            template <size_t I> constexpr auto getParameter(const std::vector<std::shared_ptr<void>> &params) const
             {
                 if constexpr (std::is_pointer_v<typename ConstructorTraits::template Arg<I>::Type>)
                 {
@@ -229,18 +230,18 @@ namespace sd
         }
 
       private:
-        void *createAndRegister(std::type_index typeIndex, const Scope &scope)
+        std::shared_ptr<void> createAndRegister(std::type_index typeIndex, const Scope &scope)
         {
             auto objectHolder = create(typeIndex);
-            auto rawPtr = objectHolder->getObjectPtr();
+            auto ptr = objectHolder->getObjectPtr();
             ObjKey key{typeIndex, scope.isTokenized() ? scope.token : nullptr};
             _objectsMap.insert({key, std::move(objectHolder)});
-            return rawPtr;
+            return ptr;
         }
 
         std::unique_ptr<IObjectHolder> create(std::type_index typeIndex)
         {
-            std::vector<void *> params;
+            std::vector<std::shared_ptr<void>> params;
             auto info = getRegistered(typeIndex);
             if (!info)
             {
@@ -254,7 +255,7 @@ namespace sd
             return info->construct(params);
         }
 
-        void *get(std::type_index index, const Scope &scope = Scope::singeleton())
+        std::shared_ptr<void> get(std::type_index index, const Scope &scope = Scope::singeleton())
         {
             if (scope.isScoped())
             {
@@ -267,7 +268,7 @@ namespace sd
             }
             else if (auto constructionInfo = getRegistered(index))
             {
-                params.push_back(make(index, *constructionInfo));
+                return createAndRegister(index, scope);
             }
             else
             {
@@ -275,7 +276,7 @@ namespace sd
             }
         }
 
-        void *getFromObjectsMap(std::type_index index, const char *token = nullptr)
+        std::shared_ptr<void> getFromObjectsMap(std::type_index index, const char *token = nullptr)
         {
             auto pair = _objectsMap.find({index, token});
             return pair != _objectsMap.end() ? pair->second->getObjectPtr() : nullptr;

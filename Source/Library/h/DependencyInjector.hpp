@@ -14,42 +14,73 @@ namespace sd
     class DependencyInjector
     {
       private:
-        template <class T> struct Constructor
+        template <typename T> struct FunctionTraits;
+
+        template <typename R, typename... Args> struct FunctionTraits<std::function<R(Args...)>>
         {
-            T ctor;
-            Constructor(T ctor) : ctor(ctor) {}
+            static const size_t nargs = sizeof...(Args);
+
+            typedef R result_type;
+
+            template <size_t i> struct arg
+            {
+                typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
+            };
         };
 
         struct IConstructionInfo
         {
             virtual std::type_index getTypeIndex() const = 0;
 
-            virtual const std::vector<std::type_index> &getParamsTypeIndexes() const = 0;
+            virtual const std::vector<std::type_index> getParamsTypeIndexes() const = 0;
 
             virtual void *construct(const std::vector<void *> &params) const = 0;
 
             virtual ~IConstructionInfo() {}
         };
 
-        template <class Type, class Param1> class ConstructionInfo final : public IConstructionInfo
+        template <typename R, typename... Args> class ConstructionInfo final : public IConstructionInfo
         {
           private:
-            std::type_index _typeIndex = typeid(Type);
-            std::vector<std::type_index> _params;
-            Type *(*_ctor)(Param1 *);
+            using ConstructorTraits = FunctionTraits<std::function<R(Args...)>>;
+            std::function<R(Args...)> _constructor;
 
           public:
-            ConstructionInfo(Constructor<Type *(*)(Param1 *)> constructor)
+            ConstructionInfo(const std::function<R(Args...)> &constructor) { _constructor = constructor; }
+
+            std::type_index getTypeIndex() const { return typeid(typename ConstructorTraits::result_type); }
+
+            const std::vector<std::type_index> getParamsTypeIndexes() const
             {
-                _ctor = constructor.ctor;
-                _params = {typeid(Param1)};
-            }
+                if constexpr (ConstructorTraits::nargs == 0)
+                {
+                    return {};
+                }
+                else if constexpr (ConstructorTraits::nargs == 1)
+                {
+                    return {typeid(typename ConstructorTraits::template arg<0>::type)};
+                }
+                else if constexpr (ConstructorTraits::nargs == 2)
+                {
+                    return {typeid(typename ConstructorTraits::template arg<0>::type),
+                            typeid(typename ConstructorTraits::template arg<1>::type)};
+                }
+            };
 
-            std::type_index getTypeIndex() const { return _typeIndex; }
-
-            const std::vector<std::type_index> &getParamsTypeIndexes() const { return _params; };
-
-            void *construct(const std::vector<void *> &params) const { return (*_ctor)((Param1 *)params[0]); };
+            void *construct(const std::vector<void *> &params) const
+            {
+                if constexpr (ConstructorTraits::nargs == 0)
+                {
+                    return _constructor();
+                }
+                else if constexpr (ConstructorTraits::nargs == 1)
+                {
+                    return _constructor((typename ConstructorTraits::template arg<0>::type)(params[0]));
+                }
+                else if constexpr (ConstructorTraits::nargs == 2)
+                {
+                }
+            };
         };
 
       private:
@@ -60,12 +91,12 @@ namespace sd
         template <class I, class T> void addSingeleton()
         {
             // todo check if T inherits from/implements I
-            auto cons = Constructor{T::constructor};
-            auto i = new ConstructionInfo(cons);
-            _registered.insert({typeid(I), std::unique_ptr<IConstructionInfo>(i)});
+            std::function<decltype(T::constructor)> ff{&T::constructor};
+            auto i = new ConstructionInfo(ff);
+            _registered.insert({typeid(I *), std::unique_ptr<IConstructionInfo>(i)});
         }
 
-        template <class I> I *get() { return (I *)get(typeid(I)); }
+        template <class I> I *get() { return (I *)get(typeid(I *)); }
 
         void build()
         {
@@ -113,7 +144,15 @@ namespace sd
         IConstructionInfo *getRegistered(std::type_index index)
         {
             auto pair = _registered.find(index);
-            return pair != _registered.end() ? pair->second.get() : nullptr;
+            if (pair != _registered.end())
+            {
+                auto &ob = pair->second;
+                return ob.get();
+            }
+            else
+            {
+                return nullptr;
+            }
         }
     };
 } // namespace sd

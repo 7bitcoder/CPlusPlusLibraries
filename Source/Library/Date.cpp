@@ -1,5 +1,5 @@
-#include <chrono>
 #include "DetectOs.hpp"
+#include <chrono>
 
 // skip for linux for now, c++20 must be fully implemented for clang - linux
 #ifdef WINDOWS
@@ -219,6 +219,7 @@ namespace sd
     std::string Date::toString(const std::string &f) const { return std::format(f, ch::zt{timeZone(), timePoint()}); }
 
     Date Date::toUtcTimeZone() const { return Date{*this}.changeTimeZoneToUtc(); }
+
     Date Date::toLocalTimeZone() const { return Date{*this}.changeTimeZoneToLocal(); }
     Date Date::toDefaultTimeZone() const { return Date{*this}.changeTimeZoneToDefault(); }
     Date Date::toTimeZone(const std::string &tzName) const { return Date{*this}.changeTimeZone(tzName); }

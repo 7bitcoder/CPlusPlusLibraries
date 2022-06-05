@@ -44,7 +44,7 @@ namespace sd
             return std::make_tuple((uint8_t *)highLimit - 10, (uint8_t *)lowLimit, rsp);
         }
 #endif
-#ifdef LINUX 
+#ifdef LINUX
         auto getStackBounds()
         {
             auto rsp = getStackRsp();

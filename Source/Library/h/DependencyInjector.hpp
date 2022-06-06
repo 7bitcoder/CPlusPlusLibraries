@@ -13,47 +13,83 @@
 #include <unordered_map>
 #include <utility>
 
+#include "DependencyInjector.hpp"
 #include "Reflection.hpp"
 
 namespace sd
 {
-    template <const char *T, class S> class Token
+    template <class T> class Singeleton
     {
       private:
-        static constexpr const char *Value = T;
-        S *_object;
+        T *_object = nullptr;
 
       public:
-        static std::string getToken() { return Value; }
+        using Type = T;
 
-        Token(S *object) : _object(object) {}
+        Singeleton() = default;
+        Singeleton(T *object) : _object(object) {}
 
-        S *get() const { return _object; }
+        T *get() const { return _object; }
     };
 
-    enum ScopeType
+    template <int T, class O> class Shared
     {
-        Singeleton,
-        Tokenized,
-        Scoped,
+      private:
+        static constexpr int Token = T;
+        std::shared_ptr<O> _object;
+
+      public:
+        using Type = O;
+
+        static int getToken() { return Token; }
+
+        Shared() = default;
+        Shared(std::shared_ptr<O> object) : _object(object) {}
+
+        std::shared_ptr<O> get() const { return _object; }
+    };
+
+    template <class T> class Unique
+    {
+      private:
+        std::shared_ptr<T> _object;
+
+      public:
+        using Type = T;
+
+        Unique() = default;
+        Unique(std::shared_ptr<T> object) : _object(object) {}
+
+        std::shared_ptr<T> get() const { return _object; }
     };
 
     struct Scope
     {
       public:
-        static Scope singeleton() { return {ScopeType::Singeleton}; }
-        static Scope scoped() { return {ScopeType::Scoped}; }
-        static Scope tokenized(const char *token) { return {token}; }
+        enum Type
+        {
+            Singeleton = 1,
+            Shared,
+            Unique,
+        };
 
-        const ScopeType type;
-        const char *token = nullptr;
+      private:
+        const Type type;
+        int token = 0;
 
-        Scope(ScopeType type) : type(type) {}
-        Scope(const char *token) : type(ScopeType::Tokenized), token(token) {}
+        Scope(Type type) : type(type) {}
+        Scope(int token) : type(Type::Shared), token(token) {}
 
-        bool isSingeleton() const { return type == ScopeType::Singeleton; }
-        bool isScoped() const { return type == ScopeType::Scoped; }
-        bool isTokenized() const { return type == ScopeType::Tokenized; }
+      public:
+        static Scope singeleton() { return {Type::Singeleton}; }
+        static Scope unique() { return {Type::Unique}; }
+        static Scope shared(int token) { return {token}; }
+
+        bool isSingeleton() const { return type == Type::Singeleton; }
+        bool isUnique() const { return type == Type::Unique; }
+        bool isShared() const { return type == Type::Shared; }
+
+        int getToken() const { return token; }
     };
 
     class DependencyInjector
@@ -66,8 +102,6 @@ namespace sd
             virtual void destroyObject() = 0;
             virtual bool isValid() const = 0;
 
-            virtual const char *getToken() const = 0;
-
             virtual ~IObjectHolder() {}
         };
 
@@ -75,9 +109,8 @@ namespace sd
         {
           private:
             std::shared_ptr<T> _objectPtr;
-            const char *_token = nullptr;
 
-            ObjectHolder(T *objectPtr, const char *token = nullptr) : _objectPtr(objectPtr), _token(token) {}
+            ObjectHolder(T *objectPtr) : _objectPtr(objectPtr) {}
 
           public:
             ObjectHolder(const ObjectHolder &) = delete;
@@ -97,6 +130,44 @@ namespace sd
             operator bool() const { return isValid(); }
         };
 
+        template <class T> struct TypeExtractor
+        {
+            using Type = T;
+        };
+        template <class T> struct TypeExtractor<std::shared_ptr<T>>
+        {
+            using Type = typename std::shared_ptr<T>::element_type;
+        };
+        template <class T> struct TypeExtractor<std::unique_ptr<T>>
+        {
+            using Type = typename std::unique_ptr<T>::element_type;
+        };
+        template <class T> struct TypeExtractor<Singeleton<T>>
+        {
+            using Type = typename Singeleton<T>::Type;
+        };
+        template <class T> struct TypeExtractor<Unique<T>>
+        {
+            using Type = typename Unique<T>::Type;
+        };
+        template <class T, int U> struct TypeExtractor<Shared<U, T>>
+        {
+            using Type = typename Shared<U, T>::Type;
+        };
+        template <class O, int T = 0> struct TokenExtractor
+        {
+            static constexpr int token = T;
+        };
+        template <class O, int T> struct TokenExtractor<Shared<T, O>>
+        {
+            static constexpr int token = T;
+        };
+        // template <class T, class U> struct IsShared<T> : public std::false_type
+        // {
+        // };
+        // template <class T, class U> struct IsShared<Shared<T, U>> : public std::false_type
+        // {
+        // };
         template <class T> struct ConstrutorTraits
         {
             using Type = T;
@@ -107,8 +178,15 @@ namespace sd
             template <size_t I> struct Arg
             {
                 using Type = typename std::tuple_element<I, TupleArgs>::type;
-                using RawType = typename std::remove_cvref_t<std::remove_pointer_t<Type>>;
+                using InnerType = typename TypeExtractor<Type>::Type;
+                using RawType = typename std::remove_cvref_t<std::remove_pointer_t<InnerType>>;
                 using RawTypePtr = typename std::add_pointer_t<RawType>;
+                using SharedPtr = std::shared_ptr<RawType>;
+                using UniquePtr = std::unique_ptr<RawType>;
+                using Singeleton = Singeleton<RawType>;
+                using Unique = Unique<RawType>;
+                using TokenAccesor = TokenExtractor<Type>;
+                using Shared = Shared<TokenAccesor::token, RawType>;
             };
         };
 
@@ -118,7 +196,7 @@ namespace sd
 
             virtual std::type_index getTypeIndex() const = 0;
 
-            virtual const std::vector<std::type_index> getParamsTypeIndexes() const = 0;
+            virtual const std::vector<std::pair<std::type_index, Scope>> getParamsTypeIndexes() const = 0;
 
             virtual std::unique_ptr<IObjectHolder> construct(
                 const std::vector<std::shared_ptr<void>> &params) const = 0;
@@ -140,7 +218,7 @@ namespace sd
 
             std::type_index getTypeIndex() const { return typeid(typename ConstructorTraits::Type); }
 
-            const std::vector<std::type_index> getParamsTypeIndexes() const
+            const std::vector<std::pair<std::type_index, Scope>> getParamsTypeIndexes() const
             {
                 return getParamsTypeIndexesInt(Indices{});
             };
@@ -156,9 +234,10 @@ namespace sd
 
           private:
             template <size_t... I>
-            const std::vector<std::type_index> getParamsTypeIndexesInt(std::index_sequence<I...> seq) const
+            const std::vector<std::pair<std::type_index, Scope>> getParamsTypeIndexesInt(
+                std::index_sequence<I...> seq) const
             {
-                return std::vector<std::type_index>{(typeid(typename ConstructorTraits::template Arg<I>::RawType))...};
+                return std::vector<std::pair<std::type_index, Scope>>{(getParameterInfo<I>())...};
             };
 
             template <size_t... I>
@@ -168,54 +247,118 @@ namespace sd
                 return ObjectHolder<T>::create(getParameter<I>(params)...);
             };
 
-            template <size_t I> constexpr auto getParameter(const std::vector<std::shared_ptr<void>> &params) const
+            template <size_t I> std::pair<std::type_index, Scope> getParameterInfo() const
             {
-                if constexpr (std::is_pointer_v<typename ConstructorTraits::template Arg<I>::Type>)
+                using Type = typename ConstructorTraits::template Arg<I>::Type;
+                using RawType = typename ConstructorTraits::template Arg<I>::RawType;
+                using SharedPtr = typename ConstructorTraits::template Arg<I>::SharedPtr;
+
+                std::type_index typeIndex = typeid(RawType);
+
+                if constexpr (std::is_same_v<Type, SharedPtr>)
                 {
-                    return (typename ConstructorTraits::template Arg<I>::RawTypePtr)params[I];
+                    return {typeIndex, Scope::singeleton()};
                 }
-                else if constexpr (std::is_reference_v<typename ConstructorTraits::template Arg<I>::Type>)
+                else if constexpr (std::is_same_v<Type, typename ConstructorTraits::template Arg<I>::UniquePtr>)
                 {
-                    return *(typename ConstructorTraits::template Arg<I>::RawTypePtr)params[I];
+                    return {typeIndex, Scope::unique()};
+                }
+                else if constexpr (std::is_same_v<Type, typename ConstructorTraits::template Arg<I>::RawTypePtr>)
+                {
+                    return {typeIndex, Scope::singeleton()};
+                }
+                else if constexpr (std::is_same_v<Type, typename ConstructorTraits::template Arg<I>::Singeleton>)
+                {
+                    return {typeIndex, Scope::singeleton()};
+                }
+                else if constexpr (std::is_same_v<Type, typename ConstructorTraits::template Arg<I>::Unique>)
+                {
+                    return {typeIndex, Scope::unique()};
+                }
+                else if constexpr (std::is_same_v<Type, typename ConstructorTraits::template Arg<I>::Shared>)
+                {
+                    return {typeIndex, Scope::shared(ConstructorTraits::template Arg<I>::TokenAccesor::token)};
                 }
                 else
                 {
-                    static_assert(true, "Could not fetch parameters");
+                    return {typeIndex, Scope::singeleton()};
+                }
+            }
+
+            template <size_t I> constexpr auto getParameter(const std::vector<std::shared_ptr<void>> &params) const
+            {
+                using Type = typename ConstructorTraits::template Arg<I>::Type;
+                using RawType = typename ConstructorTraits::template Arg<I>::RawType;
+                using SharedPtr = typename ConstructorTraits::template Arg<I>::SharedPtr;
+                using Shared = typename ConstructorTraits::template Arg<I>::Shared;
+
+                SharedPtr typedShared = std::static_pointer_cast<RawType>(params[I]);
+                if constexpr (std::is_same_v<Type, SharedPtr>)
+                {
+                    return typedShared;
+                }
+                else if constexpr (std::is_same_v<Type, typename ConstructorTraits::template Arg<I>::UniquePtr>)
+                {
+                    return typedShared;
+                }
+                else if constexpr (std::is_same_v<Type, typename ConstructorTraits::template Arg<I>::RawTypePtr>)
+                {
+                    return typedShared.get();
+                }
+                else if constexpr (std::is_same_v<Type, typename ConstructorTraits::template Arg<I>::Singeleton>)
+                {
+                    using Singeleton = typename ConstructorTraits::template Arg<I>::Singeleton;
+                    return Singeleton{typedShared.get()};
+                }
+                else if constexpr (std::is_same_v<Type, typename ConstructorTraits::template Arg<I>::Unique>)
+                {
+                    using Unique = typename ConstructorTraits::template Arg<I>::Unique;
+                    return Unique{typedShared};
+                }
+                else if constexpr (std::is_same_v<Type, typename ConstructorTraits::template Arg<I>::Shared>)
+                {
+                    using Shared = typename ConstructorTraits::template Arg<I>::Shared;
+                    return Shared{typedShared};
+                }
+                else
+                {
+                    Shared ff = 123;
+                    return nullptr;
                 }
             }
         };
 
+        struct ObjKey
+        {
+            const std::type_index typeIndex;
+            int token;
+
+            ObjKey(const ObjKey &) = default;
+            ObjKey(std::type_index typeIndex, int token) : typeIndex(typeIndex), token(token) {}
+
+            bool operator==(const ObjKey &other) const { return typeIndex == other.typeIndex && token == other.token; }
+        };
+
+        struct ObjKeyHasher
+        {
+            std::size_t operator()(const ObjKey &k) const
+            {
+
+                return ((std::hash<std::type_index>()(k.typeIndex) ^ (std::hash<int>()(k.token) << 1)) >> 1);
+            }
+        };
+
       private:
-        using ObjKey = std::pair<std::type_index, const char *>;
         std::unordered_map<std::type_index, std::unique_ptr<IConstructionInfo>> _registered;
-        std::unordered_map<ObjKey, std::unique_ptr<IObjectHolder>> _objectsMap;
+        std::unordered_map<ObjKey, std::unique_ptr<IObjectHolder>, ObjKeyHasher> _objectsMap;
 
       public:
-        template <class I, class T> void addSingeleton()
-        {
-            static_assert(std::is_base_of_v<I, T>, "Type T must inherit from I");
-            _registered.insert({typeid(I), std::make_unique<ConstructionInfo<T>>(Scope::singeleton())});
-        }
-        template <class I, class T> void addScoped()
-        {
-            static_assert(std::is_base_of_v<I, T>, "Type T must inherit from I");
-            _registered.insert({typeid(I), std::make_unique<ConstructionInfo<T>>(Scope::scoped())});
-        }
-        template <class I, class T> void addTokenized(const char *token)
-        {
-            static_assert(std::is_base_of_v<I, T>, "Type T must inherit from I");
-            _registered.insert({typeid(I), std::make_unique<ConstructionInfo<T>>(Scope::tokenized(token))});
-        }
+        template <class I, class T> void addSingeleton() { add<I, T>(Scope::singeleton()); }
+        template <class I, class T> void addUnique() { add<I, T>(Scope::unique()); }
+        template <class I, class T> void addShared(int token) { add<I, T>(Scope::shared(token)); }
 
-        template <class I> I *getPtr(const char *token = nullptr) { return (I *)getFromObjectsMap(typeid(I), token); }
-        template <class I> I &getRef(const char *token = nullptr)
-        {
-            if (auto ptr = getPtr<I>(token))
-            {
-                return *ptr;
-            }
-            throw std::exception_ptr();
-        }
+        template <class I> I *getPtr(int token = 0) { return (I *)getFromObjectsMap(typeid(I), token).get(); }
+        template <class I> I &getRef(int token = 0) { return *((I *)getFromObjectsMapSafe(typeid(I), token).get()); }
 
         void build()
         {
@@ -230,11 +373,17 @@ namespace sd
         }
 
       private:
+        template <class I, class T> void add(const Scope &scope)
+        {
+            static_assert(std::is_base_of_v<I, T>, "Type T must inherit from I");
+            _registered.insert({typeid(I), std::make_unique<ConstructionInfo<T>>(scope)});
+        }
+
         std::shared_ptr<void> createAndRegister(std::type_index typeIndex, const Scope &scope)
         {
             auto objectHolder = create(typeIndex);
             auto ptr = objectHolder->getObjectPtr();
-            ObjKey key{typeIndex, scope.isTokenized() ? scope.token : nullptr};
+            ObjKey key{typeIndex, scope.isShared() ? scope.getToken() : 0};
             _objectsMap.insert({key, std::move(objectHolder)});
             return ptr;
         }
@@ -242,50 +391,69 @@ namespace sd
         std::unique_ptr<IObjectHolder> create(std::type_index typeIndex)
         {
             std::vector<std::shared_ptr<void>> params;
-            auto info = getRegistered(typeIndex);
-            if (!info)
+            auto &info = getRegisteredSafe(typeIndex);
+            auto &indexes = info.getParamsTypeIndexes();
+            for (auto pair : indexes)
             {
-                // todo
+                auto [index, scope] = pair;
+                params.push_back(get(index, scope));
             }
-            auto &indexes = info->getParamsTypeIndexes();
-            for (auto index : indexes)
-            {
-                params.push_back(get(index));
-            }
-            return info->construct(params);
+            return info.construct(params);
         }
 
-        std::shared_ptr<void> get(std::type_index index, const Scope &scope = Scope::singeleton())
+        std::shared_ptr<void> get(std::type_index index, const Scope &scope)
         {
-            if (scope.isScoped())
+            auto &info = getRegisteredSafe(index);
+
+            auto registeredScope = info.getScope();
+            if (scope.isUnique())
             {
                 return create(index);
             }
-            const char *token = scope.isTokenized() ? scope.token : nullptr;
-            if (auto object = getFromObjectsMap(index, token))
+            if (scope.isSingeleton() && registeredScope.isSingeleton())
             {
-                return object;
+                return getFromObjectsMap(index);
             }
-            else if (auto constructionInfo = getRegistered(index))
+            if (scope.isShared() && (registeredScope.isShared() || registeredScope.isSingeleton()))
             {
+                int token = scope.getToken();
+                if (auto object = getFromObjectsMap(index, token))
+                {
+                    return object;
+                }
                 return createAndRegister(index, scope);
             }
-            else
-            {
-                throw std::runtime_error("Services build failed");
-            }
+            throw std::runtime_error("Services build failed");
         }
 
-        std::shared_ptr<void> getFromObjectsMap(std::type_index index, const char *token = nullptr)
+        std::shared_ptr<void> getFromObjectsMap(std::type_index index, int token = 0)
         {
             auto pair = _objectsMap.find({index, token});
             return pair != _objectsMap.end() ? pair->second->getObjectPtr() : nullptr;
+        }
+
+        std::shared_ptr<void> getFromObjectsMapSafe(std::type_index index, int token = 0)
+        {
+            if (auto ptr = getFromObjectsMap(index, token))
+            {
+                return ptr;
+            }
+            throw std::exception_ptr();
         }
 
         IConstructionInfo *getRegistered(std::type_index index)
         {
             auto pair = _registered.find(index);
             return pair != _registered.end() ? pair->second.get() : nullptr;
+        }
+
+        IConstructionInfo &getRegisteredSafe(std::type_index index)
+        {
+            if (auto ptr = getRegistered(index))
+            {
+                return *ptr;
+            }
+            throw std::runtime_error("Object type was not registered");
         }
     };
 } // namespace sd

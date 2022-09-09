@@ -5,6 +5,8 @@
 #include <thread>
 #include <utility>
 
+using namespace std::string_literals;
+
 class CacheTest : public ::testing::Test
 {
   protected:
@@ -26,7 +28,7 @@ TEST_F(CacheTest, AddTest)
     sd::Cache cache;
 
     auto intItem = sd::CacheItem<int>::Make("int", 12);
-    auto stringItem = sd::CacheItem<std::string>::Make("string", std::string("hello"));
+    auto stringItem = sd::CacheItem<std::string>::Make("string", "hello"s);
     auto boolItem = sd::CacheItem<bool>::Make("bool", false);
     auto boolItem2 = sd::CacheItem<bool>::Make("bool", true);
 
@@ -41,7 +43,7 @@ TEST_F(CacheTest, AddDirectTest)
     sd::Cache cache;
 
     EXPECT_TRUE(cache.Add("int", 12));
-    EXPECT_TRUE(cache.Add("string", std::string("hello")));
+    EXPECT_TRUE(cache.Add("string", "hello"s));
     EXPECT_TRUE(cache.Add("bool", true));
     EXPECT_FALSE(cache.Add("bool", false));
 }
@@ -51,7 +53,7 @@ TEST_F(CacheTest, CountTest)
     sd::Cache cache;
 
     cache.Add("int", 12);
-    cache.Add("string", std::string("hello"));
+    cache.Add("string", "hello"s);
     cache.Add("bool", true);
     cache.Add("bool", false);
 
@@ -63,7 +65,7 @@ TEST_F(CacheTest, ContainsTest)
     sd::Cache cache;
 
     cache.Add("int", 12);
-    cache.Add("string", std::string("hello"));
+    cache.Add("string", "hello"s);
     cache.Add("bool", true);
     cache.Add("bool", false);
 
@@ -85,7 +87,7 @@ TEST_F(CacheTest, GetTest)
     sd::Cache cache;
 
     cache.Add("int", 12);
-    cache.Add("string", std::string("hello"));
+    cache.Add("string", "hello"s);
     cache.Add("bool", false);
 
     EXPECT_EQ(*cache.Get<int>("int"), 12);
@@ -98,7 +100,7 @@ TEST_F(CacheTest, RemoveTest)
     sd::Cache cache;
 
     cache.Add("int", 12);
-    cache.Add("string", std::string("hello"));
+    cache.Add("string", "hello"s);
     cache.Add("bool", false);
 
     EXPECT_TRUE(cache.Remove("int"));

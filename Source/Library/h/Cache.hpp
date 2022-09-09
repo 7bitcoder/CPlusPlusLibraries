@@ -125,6 +125,13 @@ namespace sd
             return Add(CacheItem<TValue>::Make(key, std::move(value)), std::move(policy));
         }
 
+        template <class TValue>
+        bool Add(std::unique_ptr<CacheItem<TValue>> itemPtr, std::unique_ptr<CachePolicy<TValue>> policy = nullptr)
+        {
+            std::unique_ptr<ICacheItem> itemPtrCasted = std::move(itemPtr);
+            return Add(std::move(itemPtrCasted), std::move(policy));
+        }
+
         bool Add(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> policy = nullptr) final;
 
         template <class TValue>
@@ -138,7 +145,8 @@ namespace sd
         const TValue *AddOrGetExisting(std::unique_ptr<CacheItem<TValue>> itemPtr,
                                        std::unique_ptr<CachePolicy<TValue>> policy = nullptr)
         {
-            return static_cast<const TValue *>(AddOrGetExisting(std::move(itemPtr), std::move(policy)));
+            std::unique_ptr<ICacheItem> itemPtrCasted = std::move(itemPtr);
+            return static_cast<const TValue *>(AddOrGetExisting(std::move(itemPtrCasted), std::move(policy)));
         }
 
         const void *AddOrGetExisting(std::unique_ptr<ICacheItem> itemPtr,
@@ -153,7 +161,8 @@ namespace sd
         template <class TValue>
         bool Set(std::unique_ptr<CacheItem<TValue>> itemPtr, std::unique_ptr<CachePolicy<TValue>> policy = nullptr)
         {
-            return Set(std::move(itemPtr), std::move(policy));
+            std::unique_ptr<ICacheItem> itemPtrCasted = std::move(itemPtr);
+            return Set(std::move(itemPtrCasted), std::move(policy));
         }
 
         bool Set(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> policy = nullptr) final;

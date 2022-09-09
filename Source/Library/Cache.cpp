@@ -26,7 +26,7 @@ namespace sd
         return nullptr;
     }
 
-    bool Cache::Set(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> policy)
+    bool Cache::Set(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> newPolicy)
     {
         if (!itemPtr)
         {
@@ -37,14 +37,17 @@ namespace sd
         {
             return false;
         }
-        itemPtr.swap(data->item);
-        if (data->policy && data->item && itemPtr)
+        std::swap(itemPtr, data->item);
+        auto &oldItem = itemPtr;
+        auto &newItem = data->item;
+        auto &oldPolicy = data->policy;
+        if (oldPolicy && oldItem && newItem)
         {
-            data->policy->CallOnUpdate(itemPtr->GetValue(), data->item->GetValue());
+            oldPolicy->CallOnUpdate(oldItem->GetValue(), newItem->GetValue());
         }
-        if (policy)
+        if (newPolicy)
         {
-            data->policy = std::move(policy);
+            data->policy = std::move(newPolicy);
         }
         return true;
     }

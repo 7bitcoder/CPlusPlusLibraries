@@ -3,7 +3,7 @@
 int main(int argc, char *argv[])
 {
     // Run a specific test only
-    testing::GTEST_FLAG(filter) = "DependencyInjector.*";
+    testing::GTEST_FLAG(filter) = "CacheTest.*";
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

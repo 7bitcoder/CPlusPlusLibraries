@@ -1,5 +1,4 @@
-
-#file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS *.cpp)
+# file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS *.cpp)
 
 add_executable(Test
     RunTests.cpp
@@ -7,9 +6,10 @@ add_executable(Test
     MapTest.cpp
     MemoryManagerTest.cpp
     DependencyInjectorTest.cpp
+    CacheTest.cpp
 )
 
-target_link_libraries(Test 
+target_link_libraries(Test
     SandboxLib
     CONAN_PKG::gtest
 )

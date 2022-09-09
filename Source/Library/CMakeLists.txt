@@ -1,8 +1,9 @@
-#file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS *.cpp)
+# file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS *.cpp)
 
-add_library(SandboxLib 
+add_library(SandboxLib
   LinkedList.cpp
   Map.cpp
+  Cache.cpp
   MemoryManager.cpp
   DependencyInjector.cpp
 )

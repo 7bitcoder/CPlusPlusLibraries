@@ -3,7 +3,7 @@
 
 namespace sd
 {
-    bool Cache::Add(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> policy)
+    bool Cache::Add(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy)
     {
         if (!itemPtr)
         {
@@ -12,21 +12,7 @@ namespace sd
         return AddData({.item = std::move(itemPtr), .policy = std::move(policy)});
     }
 
-    const void *Cache::AddOrGetExisting(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> policy)
-    {
-        if (!itemPtr)
-        {
-            return nullptr;
-        }
-        if (auto value = Get(itemPtr->GetKey()))
-        {
-            return value;
-        }
-        Add(std::move(itemPtr), std::move(policy));
-        return nullptr;
-    }
-
-    bool Cache::Set(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> newPolicy)
+    bool Cache::Set(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr newPolicy)
     {
         if (!itemPtr)
         {
@@ -37,13 +23,13 @@ namespace sd
         {
             return false;
         }
-        std::swap(itemPtr, data->item);
+        std::swap(data->item, itemPtr);
         auto &oldItem = itemPtr;
         auto &newItem = data->item;
         auto &oldPolicy = data->policy;
         if (oldPolicy && oldItem && newItem)
         {
-            oldPolicy->CallOnUpdate(oldItem->GetValue(), newItem->GetValue());
+            oldPolicy->CallOnUpdate(oldItem.get(), newItem.get());
         }
         if (newPolicy)
         {
@@ -54,9 +40,15 @@ namespace sd
 
     const void *Cache::Get(const std::string &key) const
     {
+        auto item = GetItem(key);
+        return item ? item->GetValue() : nullptr;
+    }
+
+    const CacheItemBase *Cache::GetItem(const std::string &key) const
+    {
         if (auto data = GetData(key); data && data->item)
         {
-            return data->item->GetValue();
+            return data->item.get();
         }
         return nullptr;
     }
@@ -72,7 +64,7 @@ namespace sd
         auto &policy = data->policy;
         if (item && policy)
         {
-            policy->CallOnRemove(item->GetValue());
+            policy->CallOnRemove(item.get());
         }
         return true;
     }

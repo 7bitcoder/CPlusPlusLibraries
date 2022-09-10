@@ -2,20 +2,38 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 
 namespace sd
 {
 
-    struct ICacheItem
+    template <class TValue> class CacheItem;
+    struct CacheItemBase
     {
+        using Ptr = std::unique_ptr<CacheItemBase>;
+
         virtual const std::string &GetKey() const = 0;
         virtual const void *GetValue() const = 0;
 
-        virtual ~ICacheItem(){};
+        template <class TValue> const CacheItem<TValue> *Upcast() const
+        {
+            return dynamic_cast<const CacheItem<TValue> *>(this);
+        }
+
+        template <class TValue> const TValue *GetValueAs() const
+        {
+            if (auto casted = Upcast<TValue>())
+            {
+                return casted->GetTypedValue();
+            }
+            return nullptr;
+        }
+
+        virtual ~CacheItemBase(){};
     };
 
-    template <class TValue> class CacheItem final : public ICacheItem
+    template <class TValue> class CacheItem final : public CacheItemBase
     {
       private:
         std::string _key;
@@ -32,14 +50,16 @@ namespace sd
         CacheItem(const std::string &key, TValue &&value) : _key(key), _value(value) {}
 
         const std::string &GetKey() const final { return _key; }
-        const void *GetValue() const final { return &GetTypedValue(); }
-        const TValue &GetTypedValue() const { return _value; }
+        const void *GetValue() const final { return GetTypedValue(); }
+        const TValue *GetTypedValue() const { return &_value; }
     };
 
     struct ICachePolicy
     {
-        virtual void CallOnRemove(const void *value) const = 0;
-        virtual void CallOnUpdate(const void *oldValue, const void *newValue) const = 0;
+        using Ptr = std::unique_ptr<ICachePolicy>;
+
+        virtual void CallOnRemove(const CacheItemBase *value) const = 0;
+        virtual void CallOnUpdate(const CacheItemBase *oldValue, const CacheItemBase *newValue) const = 0;
 
         virtual ~ICachePolicy() {}
     };
@@ -55,10 +75,11 @@ namespace sd
         RemoveCallback _removeCallback;
 
       public:
-        std::unique_ptr<CachePolicy<TValue>> static Make(UpdateCallback updateCallback = nullptr,
-                                                         RemoveCallback removeCallback = nullptr)
+        using Ptr = std::unique_ptr<CachePolicy<TValue>>;
+
+        Ptr static Make(UpdateCallback updateCallback = nullptr, RemoveCallback removeCallback = nullptr)
         {
-            return std::unique_ptr<CachePolicy<TValue>>(new CachePolicy<TValue>(updateCallback, removeCallback));
+            return Ptr(new CachePolicy<TValue>(updateCallback, removeCallback));
         }
 
         CachePolicy(UpdateCallback updateCallback = nullptr, RemoveCallback removeCallback = nullptr)
@@ -70,33 +91,32 @@ namespace sd
 
         void SetOnRemoveCallback(RemoveCallback removeCallback) { _removeCallback = removeCallback; }
 
-        void CallOnRemove(const void *value) const final
+        void CallOnRemove(const CacheItemBase *item) const final
         {
-            if (_removeCallback)
+            if (_removeCallback && item)
             {
-                _removeCallback(static_cast<const TValue *>(value));
+                _removeCallback(item->GetValueAs<TValue>());
             }
         }
 
-        void CallOnUpdate(const void *oldValue, const void *newValue) const final
+        void CallOnUpdate(const CacheItemBase *oldItem, const CacheItemBase *newItem) const final
         {
-            if (_updateCallback)
+            if (_updateCallback && oldItem && newItem)
             {
-                _updateCallback(static_cast<const TValue *>(oldValue), static_cast<const TValue *>(newValue));
+                _updateCallback(oldItem->GetValueAs<TValue>(), newItem->GetValueAs<TValue>());
             }
         }
     };
 
     struct ICache
     {
-        virtual bool Add(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> policy = nullptr) = 0;
+        virtual bool Add(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy = nullptr) = 0;
 
-        virtual bool Set(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> policy = nullptr) = 0;
-
-        virtual const void *AddOrGetExisting(std::unique_ptr<ICacheItem> itemPtr,
-                                             std::unique_ptr<ICachePolicy> policy = nullptr) = 0;
+        virtual bool Set(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy = nullptr) = 0;
 
         virtual const void *Get(const std::string &key) const = 0;
+
+        virtual const CacheItemBase *GetItem(const std::string &key) const = 0;
 
         virtual bool Remove(const std::string &key) = 0;
 
@@ -112,67 +132,65 @@ namespace sd
       private:
         struct Data
         {
-            std::unique_ptr<ICacheItem> item;
-            std::unique_ptr<ICachePolicy> policy;
+            CacheItemBase::Ptr item;
+            ICachePolicy::Ptr policy;
         };
 
         std::unordered_map<std::string, Data> _items;
 
       public:
+        Cache() = default;
+        Cache(const Cache &) = delete;
+        Cache(Cache &&) = delete;
+
+        Cache &operator=(const Cache &) = delete;
+        Cache &operator=(Cache &&) = delete;
+
         template <class TValue>
-        bool Add(const std::string &key, TValue &&value, std::unique_ptr<CachePolicy<TValue>> policy = nullptr)
+        bool Add(const std::string &key, TValue &&value, typename CachePolicy<TValue>::Ptr policy = nullptr)
         {
-            return Add(CacheItem<TValue>::Make(key, std::move(value)), std::move(policy));
+            return Add<TValue>(CacheItem<TValue>::Make(key, std::move(value)), std::move(policy));
         }
 
         template <class TValue>
-        bool Add(std::unique_ptr<CacheItem<TValue>> itemPtr, std::unique_ptr<CachePolicy<TValue>> policy = nullptr)
+        bool Add(typename CacheItem<TValue>::Ptr itemPtr, typename CachePolicy<TValue>::Ptr policy = nullptr)
         {
-            std::unique_ptr<ICacheItem> itemPtrCasted = std::move(itemPtr);
+            CacheItemBase::Ptr itemPtrCasted = std::move(itemPtr);
             return Add(std::move(itemPtrCasted), std::move(policy));
         }
 
-        bool Add(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> policy = nullptr) final;
+        bool Add(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy = nullptr) final;
 
         template <class TValue>
-        const TValue *AddOrGetExisting(const std::string &key, TValue &&value,
-                                       std::unique_ptr<CachePolicy<TValue>> policy = nullptr)
+        bool Set(const std::string &key, TValue &&value, typename CachePolicy<TValue>::Ptr policy = nullptr)
         {
-            return AddOrGetExisting(CacheItem<TValue>::Make(key, std::move(value)), std::move(policy));
+            return Set<TValue>(CacheItem<TValue>::Make(key, std::move(value)), std::move(policy));
         }
 
         template <class TValue>
-        const TValue *AddOrGetExisting(std::unique_ptr<CacheItem<TValue>> itemPtr,
-                                       std::unique_ptr<CachePolicy<TValue>> policy = nullptr)
+        bool Set(typename CacheItem<TValue>::Ptr itemPtr, typename CachePolicy<TValue>::Ptr policy = nullptr)
         {
-            std::unique_ptr<ICacheItem> itemPtrCasted = std::move(itemPtr);
-            return static_cast<const TValue *>(AddOrGetExisting(std::move(itemPtrCasted), std::move(policy)));
-        }
-
-        const void *AddOrGetExisting(std::unique_ptr<ICacheItem> itemPtr,
-                                     std::unique_ptr<ICachePolicy> policy = nullptr) final;
-
-        template <class TValue>
-        bool Set(const std::string &key, TValue &&value, std::unique_ptr<CachePolicy<TValue>> policy = nullptr)
-        {
-            return Set(CacheItem<TValue>::Make(key, std::move(value)), std::move(policy));
-        }
-
-        template <class TValue>
-        bool Set(std::unique_ptr<CacheItem<TValue>> itemPtr, std::unique_ptr<CachePolicy<TValue>> policy = nullptr)
-        {
-            std::unique_ptr<ICacheItem> itemPtrCasted = std::move(itemPtr);
+            CacheItemBase::Ptr itemPtrCasted = std::move(itemPtr);
             return Set(std::move(itemPtrCasted), std::move(policy));
         }
 
-        bool Set(std::unique_ptr<ICacheItem> itemPtr, std::unique_ptr<ICachePolicy> policy = nullptr) final;
+        bool Set(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy = nullptr) final;
 
         template <class TValue> const TValue *Get(const std::string &key) const
         {
-            return static_cast<const TValue *>(Get(key));
+            auto item = GetItem(key);
+            return item ? item->GetValueAs<TValue>() : nullptr;
         }
 
         const void *Get(const std::string &key) const final;
+
+        template <class TValue> const CacheItem<TValue> *GetItem(const std::string &key) const
+        {
+            auto item = GetItem(key);
+            return item ? item->Upcast<TValue>() : nullptr;
+        }
+
+        const CacheItemBase *GetItem(const std::string &key) const final;
 
         bool Remove(const std::string &key) final;
 
@@ -192,5 +210,58 @@ namespace sd
         bool ContainsData(const std::string &key) const;
 
         size_t CountData() const;
+    };
+
+    class CacheWrapper
+    {
+      private:
+        Cache _cache;
+        std::string _separator;
+
+      public:
+        CacheWrapper(const CacheWrapper &) = delete;
+        CacheWrapper(CacheWrapper &&) = delete;
+        CacheWrapper(const std::string &separator = "::") : _separator(separator) {}
+
+        CacheWrapper &operator=(const CacheWrapper &) = delete;
+        CacheWrapper &operator=(CacheWrapper &&) = delete;
+
+        template <class TValue>
+        bool Add(const std::string &key, TValue &&value, typename CachePolicy<TValue>::Ptr policy = nullptr)
+        {
+            return _cache.Add<TValue>(BuildKey<TValue>(key), std::move(value), std::move(policy));
+        }
+
+        template <class TValue>
+        bool Set(const std::string &key, TValue &&value, typename CachePolicy<TValue>::Ptr policy = nullptr)
+        {
+            return _cache.Set<TValue>(BuildKey<TValue>(key), std::move(value), std::move(policy));
+        }
+
+        template <class TValue> const TValue *Get(const std::string &key) const
+        {
+            return _cache.Get<TValue>(BuildKey<TValue>(key));
+        }
+
+        template <class TValue> const CacheItem<TValue> *GetItem(const std::string &key) const
+        {
+            return _cache.GetItem<TValue>(BuildKey<TValue>(key));
+        }
+
+        template <class TValue> bool Remove(const std::string &key) { return _cache.Remove(BuildKey<TValue>(key)); }
+
+        template <class TValue> bool Contains(const std::string &key) const
+        {
+            return _cache.Contains(BuildKey<TValue>(key));
+        }
+
+        size_t Count() const { return _cache.Count(); }
+
+      private:
+        template <class TValue> std::string BuildKey(const std::string &key) const
+        {
+            std::string name = typeid(TValue).name();
+            return name + _separator + key;
+        }
     };
 } // namespace sd

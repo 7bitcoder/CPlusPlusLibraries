@@ -33,17 +33,17 @@ TEST_F(CacheTest, AddTest)
 {
     sd::Cache cache;
 
-    auto intItem = sd::CacheItem<int>::Make(12);
-    auto stringItem = sd::CacheItem<std::string>::Make("hello"s);
-    auto boolItem = sd::CacheItem<bool>::Make(false);
-    auto classItem = sd::CacheItem<CacheTest::ExampleClass>::Make(CacheTest::ExampleClass{});
-    auto boolItem2 = sd::CacheItem<bool>::Make(true);
+    auto intItem = sd::CacheItem<int>::Make("int", 12);
+    auto stringItem = sd::CacheItem<std::string>::Make("string", "hello"s);
+    auto boolItem = sd::CacheItem<bool>::Make("bool", false);
+    auto classItem = sd::CacheItem<CacheTest::ExampleClass>::Make("class", CacheTest::ExampleClass{});
+    auto boolItem2 = sd::CacheItem<bool>::Make("bool", true);
 
-    EXPECT_TRUE(cache.Add("int", std::move(intItem)));
-    EXPECT_TRUE(cache.Add("string", std::move(stringItem)));
-    EXPECT_TRUE(cache.Add("bool", std::move(boolItem)));
-    EXPECT_TRUE(cache.Add("class", std::move(classItem)));
-    EXPECT_FALSE(cache.Add("bool", std::move(boolItem2)));
+    EXPECT_TRUE(cache.Add(std::move(intItem)));
+    EXPECT_TRUE(cache.Add(std::move(stringItem)));
+    EXPECT_TRUE(cache.Add(std::move(boolItem)));
+    EXPECT_TRUE(cache.Add(std::move(classItem)));
+    EXPECT_FALSE(cache.Add(std::move(boolItem2)));
 }
 
 TEST_F(CacheTest, AddDirectTest)
@@ -130,10 +130,10 @@ TEST_F(CacheTest, GetItemTest)
     cache.Add("class", CacheTest::ExampleClass{});
     cache.Add("bool", false);
 
-    EXPECT_EQ(*cache.GetItem<int>("int")->Ptr(), 12);
-    EXPECT_EQ(**cache.GetItem<std::string>("string"), "hello");
-    EXPECT_EQ(*cache.GetItem<bool>("bool")->Ptr(), false);
-    EXPECT_EQ((**cache.GetItem<CacheTest::ExampleClass>("class")).name, "example"s);
+    EXPECT_EQ(*cache.GetItem<int>("int")->GetValue(), 12);
+    EXPECT_EQ(*cache.GetItem<std::string>("string")->GetValue(), "hello");
+    EXPECT_EQ(*cache.GetItem<bool>("bool")->GetValue(), false);
+    EXPECT_EQ(cache.GetItem<CacheTest::ExampleClass>("class")->GetValue()->name, "example"s);
     EXPECT_FALSE(cache.GetItem<int>("bool"));
 }
 

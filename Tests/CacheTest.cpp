@@ -130,10 +130,10 @@ TEST_F(CacheTest, GetItemTest)
     cache.Add("class", CacheTest::ExampleClass{});
     cache.Add("bool", false);
 
-    EXPECT_EQ(*cache.GetItem<int>("int")->Typed(), 12);
-    EXPECT_EQ(*cache.GetItem<std::string>("string")->Typed(), "hello");
-    EXPECT_EQ(*cache.GetItem<bool>("bool")->Typed(), false);
-    EXPECT_EQ(cache.GetItem<CacheTest::ExampleClass>("class")->Typed()->name, "example"s);
+    EXPECT_EQ(*cache.GetItem<int>("int")->Ptr(), 12);
+    EXPECT_EQ(**cache.GetItem<std::string>("string"), "hello");
+    EXPECT_EQ(*cache.GetItem<bool>("bool")->Ptr(), false);
+    EXPECT_EQ((**cache.GetItem<CacheTest::ExampleClass>("class")).name, "example"s);
     EXPECT_FALSE(cache.GetItem<int>("bool"));
 }
 

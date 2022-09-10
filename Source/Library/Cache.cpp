@@ -3,7 +3,7 @@
 
 namespace sd
 {
-    bool Cache::Add(const std::string &key, ICacheItem::Ptr itemPtr, ICachePolicy::Ptr policy)
+    bool Cache::Add(const std::string &key, ICacheItem::UPtr itemPtr, ICachePolicy::UPtr policy)
     {
         if (!itemPtr)
         {
@@ -12,7 +12,7 @@ namespace sd
         return AddData(key, {.item = std::move(itemPtr), .policy = std::move(policy)});
     }
 
-    bool Cache::Set(const std::string &key, ICacheItem::Ptr itemPtr, ICachePolicy::Ptr newPolicy)
+    bool Cache::Set(const std::string &key, ICacheItem::UPtr itemPtr, ICachePolicy::UPtr newPolicy)
     {
         if (!itemPtr)
         {
@@ -41,7 +41,7 @@ namespace sd
     const void *Cache::Get(const std::string &key) const
     {
         auto item = GetItem(key);
-        return item ? item->Raw() : nullptr;
+        return item ? item->RawPtr() : nullptr;
     }
 
     const ICacheItem *Cache::GetItem(const std::string &key) const

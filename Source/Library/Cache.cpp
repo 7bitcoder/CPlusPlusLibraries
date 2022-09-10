@@ -3,28 +3,28 @@
 
 namespace sd
 {
-    bool Cache::Add(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy)
+    bool Cache::Add(CacheItemBase::Ptr item, ICachePolicy::Ptr policy)
     {
-        if (!itemPtr)
+        if (!item)
         {
             return false;
         }
-        return AddData({.item = std::move(itemPtr), .policy = std::move(policy)});
+        return AddData({.item = std::move(item), .policy = std::move(policy)});
     }
 
-    bool Cache::Set(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr newPolicy)
+    bool Cache::Set(CacheItemBase::Ptr item, ICachePolicy::Ptr newPolicy)
     {
-        if (!itemPtr)
+        if (!item)
         {
             return false;
         }
-        auto data = GetEditableData(itemPtr->GetKey());
+        auto data = GetEditableData(item->GetKey());
         if (!data)
         {
             return false;
         }
-        std::swap(data->item, itemPtr);
-        auto &oldItem = itemPtr;
+        std::swap(data->item, item);
+        auto &oldItem = item;
         auto &newItem = data->item;
         auto &oldPolicy = data->policy;
         if (oldPolicy && oldItem && newItem)

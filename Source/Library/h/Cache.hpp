@@ -23,11 +23,8 @@ namespace sd
 
         template <class TValue> const TValue *GetValueAs() const
         {
-            if (auto casted = Upcast<TValue>())
-            {
-                return casted->GetValue();
-            }
-            return nullptr;
+            auto casted = Upcast<TValue>();
+            return casted ? casted->GetValue() : nullptr;
         }
 
         virtual ~CacheItemBase(){};
@@ -47,7 +44,7 @@ namespace sd
             return Ptr(new CacheItem<TValue>(key, std::move(value)));
         }
 
-        CacheItem(const std::string &key, TValue &&value) : _key(key), _value(value) {}
+        CacheItem(const std::string &key, TValue &&value) : _key(key), _value(std::move(value)) {}
 
         const std::string &GetKey() const final { return _key; }
         const void *GetRawValue() const final { return GetValue(); }
@@ -110,9 +107,9 @@ namespace sd
 
     struct ICache
     {
-        virtual bool Add(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy = nullptr) = 0;
+        virtual bool Add(CacheItemBase::Ptr item, ICachePolicy::Ptr policy = nullptr) = 0;
 
-        virtual bool Set(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy = nullptr) = 0;
+        virtual bool Set(CacheItemBase::Ptr item, ICachePolicy::Ptr policy = nullptr) = 0;
 
         virtual const void *Get(const std::string &key) const = 0;
 
@@ -153,13 +150,13 @@ namespace sd
         }
 
         template <class TValue>
-        bool Add(typename CacheItem<TValue>::Ptr itemPtr, typename CachePolicy<TValue>::Ptr policy = nullptr)
+        bool Add(typename CacheItem<TValue>::Ptr item, typename CachePolicy<TValue>::Ptr policy = nullptr)
         {
-            CacheItemBase::Ptr itemPtrCasted = std::move(itemPtr);
-            return Add(std::move(itemPtrCasted), std::move(policy));
+            CacheItemBase::Ptr itemCasted = std::move(item);
+            return Add(std::move(itemCasted), std::move(policy));
         }
 
-        bool Add(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy = nullptr) final;
+        bool Add(CacheItemBase::Ptr item, ICachePolicy::Ptr policy = nullptr) final;
 
         template <class TValue>
         bool Set(const std::string &key, TValue &&value, typename CachePolicy<TValue>::Ptr policy = nullptr)
@@ -168,13 +165,13 @@ namespace sd
         }
 
         template <class TValue>
-        bool Set(typename CacheItem<TValue>::Ptr itemPtr, typename CachePolicy<TValue>::Ptr policy = nullptr)
+        bool Set(typename CacheItem<TValue>::Ptr item, typename CachePolicy<TValue>::Ptr policy = nullptr)
         {
-            CacheItemBase::Ptr itemPtrCasted = std::move(itemPtr);
-            return Set(std::move(itemPtrCasted), std::move(policy));
+            CacheItemBase::Ptr itemCasted = std::move(item);
+            return Set(std::move(itemCasted), std::move(policy));
         }
 
-        bool Set(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy = nullptr) final;
+        bool Set(CacheItemBase::Ptr item, ICachePolicy::Ptr policy = nullptr) final;
 
         template <class TValue> const TValue *Get(const std::string &key) const
         {

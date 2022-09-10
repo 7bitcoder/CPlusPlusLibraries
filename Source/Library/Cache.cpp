@@ -3,22 +3,22 @@
 
 namespace sd
 {
-    bool Cache::Add(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr policy)
+    bool Cache::Add(const std::string &key, ICacheItem::Ptr itemPtr, ICachePolicy::Ptr policy)
     {
         if (!itemPtr)
         {
             return false;
         }
-        return AddData({.item = std::move(itemPtr), .policy = std::move(policy)});
+        return AddData(key, {.item = std::move(itemPtr), .policy = std::move(policy)});
     }
 
-    bool Cache::Set(CacheItemBase::Ptr itemPtr, ICachePolicy::Ptr newPolicy)
+    bool Cache::Set(const std::string &key, ICacheItem::Ptr itemPtr, ICachePolicy::Ptr newPolicy)
     {
         if (!itemPtr)
         {
             return false;
         }
-        auto data = GetEditableData(itemPtr->GetKey());
+        auto data = GetEditableData(key);
         if (!data)
         {
             return false;
@@ -41,10 +41,10 @@ namespace sd
     const void *Cache::Get(const std::string &key) const
     {
         auto item = GetItem(key);
-        return item ? item->GetValue() : nullptr;
+        return item ? item->Raw() : nullptr;
     }
 
-    const CacheItemBase *Cache::GetItem(const std::string &key) const
+    const ICacheItem *Cache::GetItem(const std::string &key) const
     {
         if (auto data = GetData(key); data && data->item)
         {
@@ -75,7 +75,10 @@ namespace sd
 
     Cache::Data *Cache::GetEditableData(const std::string &key) { return const_cast<Data *>(GetData(key)); }
 
-    bool Cache::AddData(Cache::Data data) { return _items.insert({data.item->GetKey(), std::move(data)}).second; }
+    bool Cache::AddData(const std::string &key, Cache::Data data)
+    {
+        return _items.insert({key, std::move(data)}).second;
+    }
 
     std::optional<Cache::Data> Cache::RemoveData(const std::string &key)
     {

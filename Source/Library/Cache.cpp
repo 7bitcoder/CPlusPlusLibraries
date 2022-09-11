@@ -3,7 +3,7 @@
 
 namespace sd
 {
-    bool Cache::Add(CacheItemBase::Ptr item, ICachePolicy::Ptr policy)
+    bool Cache::Add(CacheItemBase::UPtr item, ICachePolicy::UPtr policy)
     {
         if (!item)
         {
@@ -12,7 +12,7 @@ namespace sd
         return AddData({.item = std::move(item), .policy = std::move(policy)});
     }
 
-    bool Cache::Set(CacheItemBase::Ptr item, ICachePolicy::Ptr newPolicy)
+    bool Cache::Set(CacheItemBase::UPtr item, ICachePolicy::UPtr newPolicy)
     {
         if (!item)
         {

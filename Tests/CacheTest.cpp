@@ -33,11 +33,11 @@ TEST_F(CacheTest, AddTest)
 {
     sd::Cache cache;
 
-    auto intItem = sd::CacheItem<int>::Make("int", 12);
-    auto stringItem = sd::CacheItem<std::string>::Make("string", "hello"s);
-    auto boolItem = sd::CacheItem<bool>::Make("bool", false);
-    auto classItem = sd::CacheItem<CacheTest::ExampleClass>::Make("class", CacheTest::ExampleClass{});
-    auto boolItem2 = sd::CacheItem<bool>::Make("bool", true);
+    auto intItem = sd::MakeCacheItem("int", 12);
+    auto stringItem = sd::MakeCacheItem("string", "hello"s);
+    auto boolItem = sd::MakeCacheItem("bool", false);
+    auto classItem = sd::MakeCacheItem("class", CacheTest::ExampleClass{});
+    auto boolItem2 = sd::MakeCacheItem("bool", true);
 
     EXPECT_TRUE(cache.Add(std::move(intItem)));
     EXPECT_TRUE(cache.Add(std::move(stringItem)));
@@ -166,7 +166,7 @@ TEST_F(CacheTest, OnUpdateCallbackTest)
 
     int combinedResult = 0;
 
-    auto policy = sd::CachePolicy<int>::Make();
+    auto policy = sd::MakeCachePolicy<int>();
     policy->SetOnUpdateCallback(
         [&](const int *oldValue, const int *newValue) { combinedResult = *oldValue - *newValue; });
 
@@ -181,8 +181,8 @@ TEST_F(CacheTest, OnRemoveCallbackTest)
 
     bool removedCalled = false;
 
-    auto policy = sd::CachePolicy<int>::Make([&](const int *oldValue, const int *newValue) {},
-                                             [&](const int *oldValue) { removedCalled = true; });
+    auto policy = sd::MakeCachePolicy<int>([&](const int *oldValue, const int *newValue) {},
+                                           [&](const int *oldValue) { removedCalled = true; });
 
     EXPECT_TRUE(cache.Add("int", 7, std::move(policy)));
     EXPECT_TRUE(cache.Remove("int"));
@@ -319,7 +319,7 @@ TEST_F(CacheTest, WrapperOnUpdateCallbackTest)
 
     int combinedResult = 0;
 
-    auto policy = sd::CachePolicy<int>::Make();
+    auto policy = sd::MakeCachePolicy<int>();
     policy->SetOnUpdateCallback(
         [&](const int *oldValue, const int *newValue) { combinedResult = *oldValue - *newValue; });
 
@@ -334,8 +334,8 @@ TEST_F(CacheTest, WrapperOnRemoveCallbackTest)
 
     bool removedCalled = false;
 
-    auto policy = sd::CachePolicy<int>::Make([&](const int *oldValue, const int *newValue) {},
-                                             [&](const int *oldValue) { removedCalled = true; });
+    auto policy = sd::MakeCachePolicy<int>([&](const int *oldValue, const int *newValue) {},
+                                           [&](const int *oldValue) { removedCalled = true; });
 
     EXPECT_TRUE(cache.Add("int", 7, std::move(policy)));
     EXPECT_TRUE(cache.Remove<int>("int"));

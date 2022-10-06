@@ -47,23 +47,35 @@ void *vector_at(vector *vector, size_t index)
     return array_at(vector->array, index);
 }
 
-void *vector_front(vector *vector)
+bool vector_set_at(vector *vector, size_t index, void *value)
 {
-    if (vector_empty(vector))
+    if (index >= vector_size(vector))
     {
-        return NULL;
+        return false;
     }
-    return array_front(vector->array);
+    return array_set_at(vector->array, index, value);
 }
 
-void *vector_back(vector *vector)
+bool vector_get_at(vector *vector, size_t index, void *value)
 {
-    if (vector_empty(vector))
+    if (index >= vector_size(vector))
     {
-        return NULL;
+        return false;
     }
-    return array_at(vector->array, vector_size(vector) - 1);
+    return array_get_at(vector->array, index, value);
 }
+
+void *vector_front(vector *vector) { return vector_at(vector, 0); }
+
+bool vector_set_front(vector *vector, void *value) { return vector_set_at(vector, 0, value); }
+
+bool vector_get_front(vector *vector, void *value) { return vector_get_at(vector, 0, value); }
+
+void *vector_back(vector *vector) { return vector_at(vector, vector_size(vector) - 1); }
+
+bool vector_set_back(vector *vector, void *value) { return vector_set_at(vector, vector_size(vector) - 1, value); }
+
+bool vector_get_back(vector *vector, void *value) { return vector_get_at(vector, vector_size(vector) - 1, value); }
 
 void *vector_data(vector *vector) { return array_data(vector->array); }
 
@@ -71,34 +83,36 @@ size_t vector_size(vector *vector) { return vector->size; }
 
 bool vector_empty(vector *vector) { return vector_size(vector) == 0; }
 
-void *vector_expand(vector *vector)
+bool vector_append(vector *vector, void *value)
 {
     if (vector_size(vector) < array_size(vector->array))
     {
         vector->size++;
-        return vector_back(vector);
+        return vector_set_back(vector, value);
     }
     size_t newArraySize = get_array_size(vector->size + 1);
 
     array *newArray = array_create(newArraySize, array_size_of_type(vector->array));
     if (newArray == NULL)
     {
-        return NULL;
+        return false;
     }
 
     array_copy(vector->array, newArray);
     array_destroy(vector->array);
     vector->array = newArray;
     vector->size++;
-    return vector_back(vector);
+    return vector_set_back(vector, value);
 }
 
-void vector_shrink(vector *vector)
+bool vector_pop(vector *vector, void *value)
 {
-    if (vector->size > 0)
+    bool result = vector_get_back(vector, value);
+    if (result && vector->size > 0)
     {
         vector->size--;
     }
+    return result;
 }
 
 void vector_erase(vector *vector, size_t index) {}

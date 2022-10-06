@@ -39,13 +39,43 @@ void *array_at(array *array, size_t index)
         return NULL;
     }
     uint8_t *casted = (uint8_t *)array->data;
-    uint8_t *ptr = casted + index * array->sizeOfType;
+    uint8_t *ptr = casted + index * array_size_of_type(array);
     return (void *)ptr;
+}
+
+bool array_get_at(array *array, size_t index, void *value)
+{
+    void *ptr = array_at(array, index);
+    if (ptr == NULL || value == NULL)
+    {
+        return false;
+    }
+    memcpy(value, ptr, array_size_of_type(array));
+    return true;
+}
+
+bool array_set_at(array *array, size_t index, void *value)
+{
+    void *ptr = array_at(array, index);
+    if (ptr == NULL || value == NULL)
+    {
+        return false;
+    }
+    memcpy(ptr, value, array_size_of_type(array));
+    return true;
 }
 
 void *array_front(array *array) { return array_at(array, 0); }
 
+bool array_set_front(array *array, void *value) { return array_set_at(array, 0, value); }
+
+bool array_get_front(array *array, void *value) { return array_get_at(array, 0, value); }
+
 void *array_back(array *array) { return array_at(array, array_size(array) - 1); }
+
+bool array_set_back(array *array, void *value) { return array_set_at(array, array_size(array) - 1, value); }
+
+bool array_get_back(array *array, void *value) { return array_get_at(array, array_size(array) - 1, value); }
 
 size_t array_size(array *array) { return array->size; }
 

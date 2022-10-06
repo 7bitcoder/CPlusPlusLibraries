@@ -51,9 +51,9 @@ TEST_F(VectorTest, ElementAtTest)
 {
     vector *vector = vector_create(3, sizeof(int));
 
-    int *first = (int *)vector_at(vector, 0);
-    *first = 123;
-    *(int *)vector_at(vector, 1) = 12;
+    int value = 123;
+    vector_set_at(vector, 0, &value);
+    vector_set_at(vector, 1, &(value = 12));
     *(int *)vector_at(vector, 2) = -12;
 
     EXPECT_EQ(*(int *)vector_at(vector, 0), 123);
@@ -68,9 +68,9 @@ TEST_F(VectorTest, FirstElementTest)
 {
     vector *vector = vector_create(3, sizeof(int));
 
-    int *first = (int *)vector_at(vector, 0);
-    *first = 123;
-    *(int *)vector_at(vector, 1) = 12;
+    int value = 123;
+    vector_set_at(vector, 0, &value);
+    vector_set_at(vector, 1, &(value = 123));
     *(int *)vector_at(vector, 2) = -12;
 
     EXPECT_EQ(*(int *)vector_front(vector), 123);
@@ -82,9 +82,9 @@ TEST_F(VectorTest, LastElementTest)
 {
     vector *vector = vector_create(3, sizeof(int));
 
-    int *first = (int *)vector_at(vector, 0);
-    *first = 123;
-    *(int *)vector_at(vector, 1) = 12;
+    int value = 123;
+    vector_set_at(vector, 0, &value);
+    vector_set_at(vector, 1, &(value = 12));
     *(int *)vector_at(vector, 2) = -12;
 
     EXPECT_EQ(*(int *)vector_back(vector), -12);
@@ -96,9 +96,9 @@ TEST_F(VectorTest, SizeTest)
 {
     vector *vector = vector_create(3, sizeof(int));
 
-    int *first = (int *)vector_at(vector, 0);
-    *first = 123;
-    *(int *)vector_at(vector, 1) = 12;
+    int value = 123;
+    vector_set_at(vector, 0, &value);
+    vector_set_at(vector, 1, &(value = 12));
     *(int *)vector_at(vector, 2) = -12;
 
     EXPECT_EQ(vector_size(vector), 3);
@@ -119,9 +119,9 @@ TEST_F(VectorTest, ClearTest)
 {
     vector *vector = vector_create(3, sizeof(int));
 
-    int *first = (int *)vector_at(vector, 0);
-    *first = 123;
-    *(int *)vector_at(vector, 1) = 12;
+    int value = 123;
+    vector_set_at(vector, 0, &value);
+    vector_set_at(vector, 1, &(value = 12));
     *(int *)vector_at(vector, 2) = -12;
 
     vector_clear(vector);
@@ -131,40 +131,43 @@ TEST_F(VectorTest, ClearTest)
     vector_destroy(vector);
 }
 
-TEST_F(VectorTest, ExpandTest)
+TEST_F(VectorTest, AppendTest)
 {
     vector *vector = vector_create(4, sizeof(int));
 
-    int *first = (int *)vector_at(vector, 0);
-    *first = 123;
-    *(int *)vector_at(vector, 1) = 12;
+    int value = 123;
+    vector_set_at(vector, 0, &value);
+    vector_set_at(vector, 1, &(value = 12));
     *(int *)vector_at(vector, 2) = -12;
 
-    int *newPos = (int *)vector_expand(vector);
-    *newPos = 9;
-    newPos = (int *)vector_expand(vector);
-    *newPos = 1;
+    int element = 9;
+    vector_append(vector, &element);
+    element = 1;
+    vector_append(vector, &element);
 
     EXPECT_EQ(*(int *)vector_at(vector, 0), 123);
     EXPECT_EQ(*(int *)vector_at(vector, 1), 12);
     EXPECT_EQ(*(int *)vector_at(vector, 2), -12);
+    EXPECT_EQ(*(int *)vector_at(vector, 4), 9);
     EXPECT_EQ(*(int *)vector_back(vector), 1);
     EXPECT_EQ(vector_size(vector), 6);
 
     vector_destroy(vector);
 }
 
-TEST_F(VectorTest, ShrinkTest)
+TEST_F(VectorTest, PopTest)
 {
     vector *vector = vector_create(2, sizeof(int));
 
-    int *first = (int *)vector_at(vector, 0);
-    *first = 123;
-    *(int *)vector_at(vector, 1) = 12;
+    int value = 123;
+    vector_set_at(vector, 0, &value);
+    vector_set_at(vector, 1, &(value = 1));
 
-    vector_shrink(vector);
-    vector_shrink(vector);
-    vector_shrink(vector);
+    vector_pop(vector, &value);
+    EXPECT_EQ(value, 1);
+    vector_pop(vector, &value);
+    EXPECT_EQ(value, 123);
+    vector_pop(vector, &value);
 
     EXPECT_TRUE(vector_empty(vector));
 

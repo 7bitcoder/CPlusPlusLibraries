@@ -14,9 +14,21 @@ extern "C"
 
     void *array_at(array *array, size_t index);
 
+    bool array_set_at(array *array, size_t index, void *value);
+
+    bool array_get_at(array *array, size_t index, void *value);
+
     void *array_front(array *array);
 
+    bool array_set_front(array *array, void *value);
+
+    bool array_get_front(array *array, void *value);
+
     void *array_back(array *array);
+
+    bool array_set_back(array *array, void *value);
+
+    bool array_get_back(array *array, void *value);
 
     void *array_data(array *array);
 

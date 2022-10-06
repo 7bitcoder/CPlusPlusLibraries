@@ -51,13 +51,16 @@ TEST_F(ArrayTest, ElementAtTest)
 {
     array *array = array_create(3, sizeof(int));
 
-    int *first = (int *)array_at(array, 0);
-    *first = 123;
+    int value = 123;
+    array_set_at(array, 0, &value);
     *(int *)array_at(array, 1) = 12;
     *(int *)array_at(array, 2) = -12;
 
     EXPECT_EQ(*(int *)array_at(array, 0), 123);
-    EXPECT_EQ(*(int *)array_at(array, 1), 12);
+
+    array_get_at(array, 1, &value);
+    EXPECT_EQ(value, 12);
+
     EXPECT_EQ(*(int *)array_at(array, 2), -12);
     EXPECT_FALSE(array_at(array, 5));
 
@@ -68,8 +71,8 @@ TEST_F(ArrayTest, FirstElementTest)
 {
     array *array = array_create(3, sizeof(int));
 
-    int *first = (int *)array_at(array, 0);
-    *first = 123;
+    int value = 123;
+    array_set_at(array, 0, &value);
     *(int *)array_at(array, 1) = 12;
     *(int *)array_at(array, 2) = -12;
 
@@ -82,8 +85,8 @@ TEST_F(ArrayTest, LastElementTest)
 {
     array *array = array_create(3, sizeof(int));
 
-    int *first = (int *)array_at(array, 0);
-    *first = 123;
+    int value = 123;
+    array_set_at(array, 0, &value);
     *(int *)array_at(array, 1) = 12;
     *(int *)array_at(array, 2) = -12;
 
@@ -96,8 +99,8 @@ TEST_F(ArrayTest, SizeTest)
 {
     array *array = array_create(3, sizeof(int));
 
-    int *first = (int *)array_at(array, 0);
-    *first = 123;
+    int value = 123;
+    array_set_at(array, 0, &value);
     *(int *)array_at(array, 1) = 12;
     *(int *)array_at(array, 2) = -12;
 
@@ -111,8 +114,8 @@ TEST_F(ArrayTest, CopyTest)
     array *arr = array_create(3, sizeof(int));
     array *dest = array_create(4, sizeof(int));
 
-    int *first = (int *)array_at(arr, 0);
-    *first = 123;
+    int value = 123;
+    array_set_at(arr, 0, &value);
     *(int *)array_at(arr, 1) = 12;
     *(int *)array_at(arr, 2) = -12;
 

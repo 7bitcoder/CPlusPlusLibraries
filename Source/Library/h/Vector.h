@@ -14,9 +14,21 @@ extern "C"
 
     void *vector_at(vector *vector, size_t index);
 
+    bool vector_set_at(vector *vector, size_t index, void *value);
+
+    bool vector_get_at(vector *vector, size_t index, void *value);
+
     void *vector_front(vector *vector);
 
+    bool vector_set_front(vector *vector, void *value);
+
+    bool vector_get_front(vector *vector, void *value);
+
     void *vector_back(vector *vector);
+
+    bool vector_set_back(vector *vector, void *value);
+
+    bool vector_get_back(vector *vector, void *value);
 
     void *vector_data(vector *vector);
 
@@ -24,9 +36,9 @@ extern "C"
 
     bool vector_empty(vector *vector);
 
-    void *vector_expand(vector *vector);
+    bool vector_append(vector *vector, void *value);
 
-    void vector_shrink(vector *vector);
+    bool vector_pop(vector *vector, void *value);
 
     void vector_erase(vector *vector, size_t index);
 

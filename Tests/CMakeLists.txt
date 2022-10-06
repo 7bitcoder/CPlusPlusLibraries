@@ -5,8 +5,9 @@ add_executable(Test
     ListTest.cpp
     MapTest.cpp
     MemoryManagerTest.cpp
-    DependencyInjectorTest.cpp
     CacheTest.cpp
+    ArrayTest.cpp
+    VectorTest.cpp
 )
 
 target_link_libraries(Test

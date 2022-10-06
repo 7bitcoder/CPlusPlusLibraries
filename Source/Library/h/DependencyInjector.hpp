@@ -21,15 +21,15 @@ namespace sd
     template <class T> class Singeleton
     {
       private:
-        T *_object = nullptr;
+        T *_service = nullptr;
 
       public:
         using Type = T;
 
         Singeleton() = default;
-        Singeleton(T *object) : _object(object) {}
+        Singeleton(T *service) : _service(service) {}
 
-        T *get() const { return _object; }
+        T *get() const { return _service; }
     };
 
     template <int T, class O> class Shared
@@ -69,27 +69,23 @@ namespace sd
         enum Type
         {
             Singeleton = 1,
-            Shared,
-            Unique,
+            Scoped,
+            Transient,
         };
 
       private:
         const Type type;
-        int token = 0;
 
         Scope(Type type) : type(type) {}
-        Scope(int token) : type(Type::Shared), token(token) {}
 
       public:
         static Scope singeleton() { return {Type::Singeleton}; }
-        static Scope unique() { return {Type::Unique}; }
-        static Scope shared(int token) { return {token}; }
+        static Scope transient() { return {Type::Transient}; }
+        static Scope scoped() { return {Type::Scoped}; }
 
         bool isSingeleton() const { return type == Type::Singeleton; }
-        bool isUnique() const { return type == Type::Unique; }
-        bool isShared() const { return type == Type::Shared; }
-
-        int getToken() const { return token; }
+        bool isTransient() const { return type == Type::Transient; }
+        bool isScoped() const { return type == Type::Scoped; }
     };
 
     class DependencyInjector
@@ -354,11 +350,10 @@ namespace sd
 
       public:
         template <class I, class T> void addSingeleton() { add<I, T>(Scope::singeleton()); }
-        template <class I, class T> void addUnique() { add<I, T>(Scope::unique()); }
-        template <class I, class T> void addShared(int token) { add<I, T>(Scope::shared(token)); }
+        template <class I, class T> void addTransient() { add<I, T>(Scope::transient()); }
+        template <class I, class T> void addScoped() { add<I, T>(Scope::scoped()); }
 
-        template <class I> I *getPtr(int token = 0) { return (I *)getFromObjectsMap(typeid(I), token).get(); }
-        template <class I> I &getRef(int token = 0) { return *((I *)getFromObjectsMapSafe(typeid(I), token).get()); }
+        template <class I> std::shared_ptr<I> get() { return (I *)getFromObjectsMap(typeid(I)).get(); }
 
         void build()
         {

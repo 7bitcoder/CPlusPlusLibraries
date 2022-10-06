@@ -5,7 +5,8 @@ add_library(SandboxLib
   Map.cpp
   Cache.cpp
   MemoryManager.cpp
-  DependencyInjector.cpp
+  Array.c
+  Vector.c
 )
 
 target_include_directories(SandboxLib PUBLIC
